@@ -1,6 +1,6 @@
 {
   "name": "prodbypiras",
-  "main": "./dist/index.js",
+  "main": "./dist/_worker.js",
   "assets": {
     "directory": "./dist"
   },
