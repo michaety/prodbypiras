@@ -1,50 +1,136 @@
 ---
-import { buttonVariants } from '@/components/ui/button';
-import { Github, LayoutDashboard } from 'lucide-react';
-import '@/styles/globals.css'
+// Portfolio landing page for music producer
+import '@/styles/globals.css';
+import { ShopListingService } from '@/lib/services/shop-listing';
+import { Music, ShoppingCart, Mail } from 'lucide-react';
 
-const repoLink = 'https://github.com/cloudflare/templates/tree/main/saas-admin-template';
+export const prerender = false;
+
+const { DB } = Astro.locals.runtime.env;
+
+// Fetch featured tracks from D1
+const shopListingService = new ShopListingService(DB);
+const featuredListings = await shopListingService.getFeatured();
 ---
 
 <script is:inline>
-  const getThemePreference = () => {
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-      return localStorage.getItem('theme');
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  };
-  const isDark = getThemePreference() === 'dark';
-  document.documentElement.classList[isDark ? 'add' : 'remove']('dark');
- 
-  if (typeof localStorage !== 'undefined') {
-    const observer = new MutationObserver(() => {
-      const isDark = document.documentElement.classList.contains('dark');
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  }
+  // Theme setup - force dark mode for music producer aesthetic
+  document.documentElement.classList.add('dark');
 </script>
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>SaaS Admin Template</title>
+    <meta name="description" content="Producer portfolio - beats, samples, and packs" />
+    <title>Producer Portfolio</title>
   </head>
   <body>
-    <div class="flex flex-col items-center justify-center gap-4 py-20 px-8">
-      <h1 class="text-5xl font-bold">SaaS Admin Template</h1>
-      <p class="text-xl text-muted-foreground">Manage a SaaS application - customers, subscriptions - using Cloudflare Workers and D1.</p>
-      <div class="flex flex gap-4 mt-4">
-        <a class={buttonVariants()} href="/admin">
-          <LayoutDashboard /> Go to admin
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 backdrop-blur-lg bg-background/80 border-b border-border">
+      <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <a href="/" class="text-2xl font-bold hover-accent">Producer</a>
+          <div class="flex items-center gap-6">
+            <a href="/shop" class="text-sm font-medium hover-accent flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" /> Shop
+            </a>
+            <a href="/contact" class="text-sm font-medium hover-accent flex items-center gap-2">
+              <Mail className="w-4 h-4" /> Contact
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="container mx-auto px-6 py-20 text-center">
+      <div class="max-w-3xl mx-auto space-y-6">
+        <h1 class="text-5xl md:text-7xl font-bold tracking-tight">
+          Producer <span class="text-primary">Portfolio</span>
+        </h1>
+        <p class="text-xl text-muted-foreground">
+          High-quality beats, samples, and production services
+        </p>
+        
+        <!-- Social Links -->
+        <div class="flex items-center justify-center gap-4 pt-4">
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" 
+             class="px-6 py-3 bg-card hover:bg-primary hover:text-primary-foreground rounded-lg transition-colors">
+            Instagram
+          </a>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
+             class="px-6 py-3 bg-card hover:bg-primary hover:text-primary-foreground rounded-lg transition-colors">
+            Twitter
+          </a>
+          <a href="https://soundcloud.com" target="_blank" rel="noopener noreferrer"
+             class="px-6 py-3 bg-card hover:bg-primary hover:text-primary-foreground rounded-lg transition-colors">
+            SoundCloud
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Tracks Grid -->
+    <section class="container mx-auto px-6 py-16">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-3xl font-bold">Featured Tracks</h2>
+        <a href="/shop" class="text-primary hover:underline flex items-center gap-2">
+          View All <ShoppingCart className="w-4 h-4" />
         </a>
-        <a class={buttonVariants({ variant: 'outline' })} href={repoLink}>
-          <Github /> View on GitHub
-        </a>
-    </div>
+      </div>
+      
+      {featuredListings.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredListings.map((listing: any) => (
+            <a href={`/shop?id=${listing.id}`} class="group block">
+              <div class="bg-card rounded-lg overflow-hidden border border-border hover:border-primary transition-colors">
+                {listing.image_url ? (
+                  <img 
+                    src={listing.image_url} 
+                    alt={listing.title}
+                    class="w-full aspect-square object-cover"
+                  />
+                ) : (
+                  <div class="w-full aspect-square bg-muted flex items-center justify-center">
+                    <Music className="w-16 h-16 text-muted-foreground" />
+                  </div>
+                )}
+                <div class="p-4 space-y-2">
+                  <h3 class="font-semibold text-lg group-hover:text-primary transition-colors">
+                    {listing.title}
+                  </h3>
+                  <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span class="px-2 py-1 bg-muted rounded">{listing.type}</span>
+                    {listing.bpm && <span>{listing.bpm} BPM</span>}
+                    {listing.key && <span>{listing.key}</span>}
+                  </div>
+                  {listing.price && (
+                    <p class="text-lg font-bold text-primary">${listing.price}</p>
+                  )}
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-16 text-muted-foreground">
+          <Music className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p>No featured tracks yet. Check back soon!</p>
+        </div>
+      )}
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-border mt-20">
+      <div class="container mx-auto px-6 py-8">
+        <p class="text-center text-muted-foreground text-sm">
+          © {new Date().getFullYear()} Producer Portfolio. All rights reserved.
+        </p>
+      </div>
+    </footer>
   </body>
 </html>

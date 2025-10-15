@@ -16,7 +16,7 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "DBD1Database",
+      "database_name": "admin",
       "database_id": "786d2f1f-fff0-4fc9-ac98-8c137f0d36d5"
     }
   ],

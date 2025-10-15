@@ -1,0 +1,245 @@
+---
+// Admin page for viewing/editing a specific listing and its tracks
+import Layout from '@/layouts/Layout.astro';
+import { ShopListingService } from '@/lib/services/shop-listing';
+import { TrackService } from '@/lib/services/track';
+import { Music, ArrowLeft, Edit, Plus, Trash2, Play } from 'lucide-react';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+const { DB } = Astro.locals.runtime.env;
+
+if (!id || id === 'new') {
+  // Redirect to form for creating new listing
+  return Astro.redirect('/admin/listings/new');
+}
+
+// Fetch listing and its tracks from D1
+const shopListingService = new ShopListingService(DB);
+const trackService = new TrackService(DB);
+
+const listing = await shopListingService.getById(parseInt(id));
+const tracks = await trackService.getByListingId(parseInt(id));
+
+if (!listing) {
+  return Astro.redirect('/admin');
+}
+---
+
+<Layout title={`${listing.title} - Track List`}>
+  <div class="space-y-6">
+    <!-- Back Button and Header -->
+    <div class="flex items-center gap-4">
+      <a 
+        href="/admin"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to Listings
+      </a>
+    </div>
+
+    <!-- Listing Details Card -->
+    <div class="bg-card rounded-lg border border-border overflow-hidden">
+      <div class="grid md:grid-cols-2 gap-6 p-6">
+        <!-- Image -->
+        <div>
+          {listing.image_url ? (
+            <img 
+              src={listing.image_url} 
+              alt={listing.title}
+              class="w-full aspect-square object-cover rounded-lg"
+            />
+          ) : (
+            <div class="w-full aspect-square bg-muted flex items-center justify-center rounded-lg">
+              <Music className="w-24 h-24 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+
+        <!-- Details -->
+        <div class="space-y-4">
+          <div>
+            <h1 class="text-3xl font-bold mb-2">{listing.title}</h1>
+            {listing.featured && (
+              <span class="inline-block px-3 py-1 bg-primary/20 text-primary rounded-full text-sm font-medium">
+                ⭐ Featured
+              </span>
+            )}
+          </div>
+
+          <div class="flex flex-wrap gap-3">
+            <div class="px-3 py-2 bg-muted rounded-lg">
+              <span class="text-sm text-muted-foreground">Type</span>
+              <p class="font-semibold">{listing.type}</p>
+            </div>
+            {listing.length && (
+              <div class="px-3 py-2 bg-muted rounded-lg">
+                <span class="text-sm text-muted-foreground">Length</span>
+                <p class="font-semibold">{listing.length}</p>
+              </div>
+            )}
+            {listing.bpm && (
+              <div class="px-3 py-2 bg-muted rounded-lg">
+                <span class="text-sm text-muted-foreground">BPM</span>
+                <p class="font-semibold">{listing.bpm}</p>
+              </div>
+            )}
+            {listing.key && (
+              <div class="px-3 py-2 bg-muted rounded-lg">
+                <span class="text-sm text-muted-foreground">Key</span>
+                <p class="font-semibold">{listing.key}</p>
+              </div>
+            )}
+          </div>
+
+          {listing.description && (
+            <div>
+              <h3 class="font-semibold mb-2">Description</h3>
+              <p class="text-muted-foreground">{listing.description}</p>
+            </div>
+          )}
+
+          <div class="pt-4 border-t border-border">
+            <div class="text-3xl font-bold text-primary mb-4">
+              ${listing.price ? Number(listing.price).toFixed(2) : '0.00'}
+            </div>
+            {listing.stripe_price_id && (
+              <p class="text-sm text-muted-foreground">
+                Stripe Price ID: <code class="bg-muted px-2 py-1 rounded">{listing.stripe_price_id}</code>
+              </p>
+            )}
+          </div>
+
+          {/* Preview Audio */}
+          {listing.preview_audio_url && (
+            <div class="pt-4 border-t border-border">
+              <h3 class="font-semibold mb-2">Preview Audio</h3>
+              <audio controls class="w-full">
+                <source src={listing.preview_audio_url} type="audio/mpeg" />
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          )}
+
+          {/* Edit Button - Placeholder for future implementation */}
+          <div class="pt-4">
+            <button 
+              class="inline-flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+              onclick="alert('Edit functionality coming soon!')"
+            >
+              <Edit className="w-4 h-4" /> Edit Listing
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track List Section -->
+    <div class="bg-card rounded-lg border border-border p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold">Track List</h2>
+        <button
+          class="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+          onclick="alert('Add track functionality coming soon!')"
+        >
+          <Plus className="w-4 h-4" /> Add Track
+        </button>
+      </div>
+
+      {tracks.length > 0 ? (
+        <div class="space-y-3">
+          {tracks.map((track: any, index: number) => (
+            <div class="group flex items-center gap-4 p-4 bg-background rounded-lg border border-border hover:border-primary transition-all">
+              {/* Track Number */}
+              <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-muted rounded font-semibold">
+                {index + 1}
+              </div>
+
+              {/* Audio Preview */}
+              {track.audio_url && (
+                <button 
+                  class="flex-shrink-0 p-2 bg-primary/10 text-primary rounded-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                  onclick={`playTrack('${track.audio_url}')`}
+                >
+                  <Play className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Track Info */}
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-lg truncate">{track.title}</h3>
+                <div class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
+                  {track.length && <span>{track.length}</span>}
+                  {track.bpm && <span>{track.bpm} BPM</span>}
+                  {track.key && <span>{track.key}</span>}
+                </div>
+              </div>
+
+              {/* Delete Button */}
+              <button
+                class="flex-shrink-0 p-2 bg-destructive/10 text-destructive rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                onclick={`deleteTrack(${track.id}, '${track.title}')`}
+                title="Delete track"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-12 text-muted-foreground">
+          <Music className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p>No tracks yet. Add your first track to this listing.</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Hidden audio player for track previews -->
+  <audio id="track-player" class="hidden"></audio>
+
+  <script>
+    // Track preview player
+    let currentTrackAudio: HTMLAudioElement | null = null;
+
+    (window as any).playTrack = function(url: string) {
+      const player = document.getElementById('track-player') as HTMLAudioElement;
+      if (!player) return;
+
+      if (currentTrackAudio && currentTrackAudio.src === url && !currentTrackAudio.paused) {
+        currentTrackAudio.pause();
+        currentTrackAudio = null;
+      } else {
+        if (currentTrackAudio) {
+          currentTrackAudio.pause();
+        }
+        player.src = url;
+        player.play();
+        currentTrackAudio = player;
+      }
+    };
+
+    // Delete track function
+    (window as any).deleteTrack = async function(id: number, title: string) {
+      if (!confirm(`Are you sure you want to delete track "${title}"?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/delete-track?id=${id}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert('Failed to delete track. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting track:', error);
+        alert('An error occurred. Please try again.');
+      }
+    };
+  </script>
+</Layout>

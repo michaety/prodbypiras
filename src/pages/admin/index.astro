@@ -1,0 +1,134 @@
+---
+// Admin dashboard - focused on shop listings management
+import Layout from '@/layouts/Layout.astro';
+import { ShopListingService } from '@/lib/services/shop-listing';
+import { Music, Plus, Trash2 } from 'lucide-react';
+
+export const prerender = false;
+
+const { DB } = Astro.locals.runtime.env;
+
+// Fetch shop listings from D1
+const shopListingService = new ShopListingService(DB);
+const listings = await shopListingService.getAll();
+---
+
+<Layout title="Shop Listings">
+  <div class="space-y-6">
+    <!-- Header with Add Button -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">Manage Shop Listings</h1>
+        <p class="text-muted-foreground mt-1">
+          Add, edit, and manage your beats, samples, and packs
+        </p>
+      </div>
+      <a 
+        href="/admin/listings/new"
+        class="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+      >
+        <Plus className="w-5 h-5" /> Add New Listing
+      </a>
+    </div>
+
+    <!-- Listings Grid -->
+    {listings.length > 0 ? (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {listings.map((listing: any) => (
+          <div class="group relative">
+            <a href={`/admin/listings/${listing.id}`} class="block">
+              <div class="bg-card rounded-lg overflow-hidden border border-border hover:border-primary transition-all">
+                {/* Image/Cover */}
+                {listing.image_url ? (
+                  <img 
+                    src={listing.image_url} 
+                    alt={listing.title}
+                    class="w-full aspect-square object-cover"
+                  />
+                ) : (
+                  <div class="w-full aspect-square bg-muted flex items-center justify-center">
+                    <Music className="w-16 h-16 text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* Details */}
+                <div class="p-4 space-y-2">
+                  <h3 class="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">
+                    {listing.title}
+                  </h3>
+                  
+                  {/* Metadata */}
+                  <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="px-2 py-1 bg-muted rounded font-medium">{listing.type}</span>
+                    {listing.bpm && <span class="text-muted-foreground">{listing.bpm} BPM</span>}
+                    {listing.key && <span class="text-muted-foreground">{listing.key}</span>}
+                  </div>
+
+                  {/* Price */}
+                  <div class="flex items-center justify-between pt-2 border-t border-border">
+                    <span class="text-lg font-bold text-primary">
+                      ${listing.price ? Number(listing.price).toFixed(2) : '0.00'}
+                    </span>
+                    {listing.featured && (
+                      <span class="text-xs px-2 py-1 bg-primary/20 text-primary rounded">
+                        Featured
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* Delete Button - Shows on hover */}
+            <button
+              class="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+              onclick={`deleteListing(${listing.id}, '${listing.title}')`}
+              title="Delete listing"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-20 bg-card rounded-lg border border-border">
+        <Music className="w-20 h-20 mx-auto mb-6 text-muted-foreground opacity-50" />
+        <h2 class="text-2xl font-semibold mb-2">No Listings Yet</h2>
+        <p class="text-muted-foreground mb-6">
+          Get started by adding your first beat, sample, or pack
+        </p>
+        <a 
+          href="/admin/listings/new"
+          class="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="w-5 h-5" /> Add New Listing
+        </a>
+      </div>
+    )}
+  </div>
+
+  <script>
+    // Delete listing function
+    (window as any).deleteListing = async function(id: number, title: string) {
+      if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/delete-listing?id=${id}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          // Reload page to show updated list
+          window.location.reload();
+        } else {
+          alert('Failed to delete listing. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting listing:', error);
+        alert('An error occurred. Please try again.');
+      }
+    };
+  </script>
+</Layout>

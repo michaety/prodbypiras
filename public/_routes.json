@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "description": "Routes configuration for Cloudflare Pages",
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/favicon.svg",
+    "/_astro/*"
+  ]
+}

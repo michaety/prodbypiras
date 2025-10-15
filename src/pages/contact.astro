@@ -1,0 +1,168 @@
+---
+// Contact form page
+import '@/styles/globals.css';
+import { ShoppingCart, Mail } from 'lucide-react';
+
+export const prerender = false;
+---
+
+<script is:inline>
+  // Theme setup - force dark mode
+  document.documentElement.classList.add('dark');
+</script>
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content="Get in touch for collaborations and inquiries" />
+    <title>Contact - Producer Portfolio</title>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 backdrop-blur-lg bg-background/80 border-b border-border">
+      <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <a href="/" class="text-2xl font-bold hover-accent">Producer</a>
+          <div class="flex items-center gap-6">
+            <a href="/shop" class="text-sm font-medium hover-accent flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" /> Shop
+            </a>
+            <a href="/contact" class="text-sm font-medium text-primary flex items-center gap-2">
+              <Mail className="w-4 h-4" /> Contact
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Contact Form Section -->
+    <section class="container mx-auto px-6 py-12">
+      <div class="max-w-2xl mx-auto">
+        <div class="text-center mb-12">
+          <h1 class="text-4xl md:text-5xl font-bold mb-4">
+            Get in <span class="text-primary">Touch</span>
+          </h1>
+          <p class="text-lg text-muted-foreground">
+            Have a question or want to collaborate? Send us a message!
+          </p>
+        </div>
+
+        <form id="contact-form" class="space-y-6 bg-card p-8 rounded-lg border border-border">
+          <div>
+            <label for="name" class="block text-sm font-medium mb-2">
+              Name <span class="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              class="w-full px-4 py-3 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              placeholder="Your name"
+            />
+          </div>
+
+          <div>
+            <label for="email" class="block text-sm font-medium mb-2">
+              Email <span class="text-destructive">*</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              class="w-full px-4 py-3 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              placeholder="your.email@example.com"
+            />
+          </div>
+
+          <div>
+            <label for="message" class="block text-sm font-medium mb-2">
+              Message <span class="text-destructive">*</span>
+            </label>
+            <textarea
+              id="message"
+              name="message"
+              required
+              rows="6"
+              class="w-full px-4 py-3 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+              placeholder="Tell us what's on your mind..."
+            ></textarea>
+          </div>
+
+          <div id="form-status" class="hidden p-4 rounded-lg"></div>
+
+          <button
+            type="submit"
+            class="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            id="submit-button"
+          >
+            Send Message
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-border mt-20">
+      <div class="container mx-auto px-6 py-8">
+        <p class="text-center text-muted-foreground text-sm">
+          © {new Date().getFullYear()} Producer Portfolio. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Handle contact form submission
+      const form = document.getElementById('contact-form') as HTMLFormElement;
+      const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+      const formStatus = document.getElementById('form-status') as HTMLDivElement;
+
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Disable submit button
+        submitButton.disabled = true;
+        submitButton.textContent = 'Sending...';
+        
+        // Hide previous status
+        formStatus.classList.add('hidden');
+
+        const formData = new FormData(form);
+
+        try {
+          const response = await fetch('/api/contact', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (response.ok) {
+            // Success
+            formStatus.textContent = 'Message sent successfully! We\'ll get back to you soon.';
+            formStatus.classList.remove('hidden', 'bg-destructive');
+            formStatus.classList.add('bg-primary', 'text-primary-foreground');
+            form.reset();
+          } else {
+            // Error
+            formStatus.textContent = 'Failed to send message. Please try again.';
+            formStatus.classList.remove('hidden', 'bg-primary');
+            formStatus.classList.add('bg-destructive', 'text-destructive-foreground');
+          }
+        } catch (error) {
+          // Network error
+          formStatus.textContent = 'Network error. Please check your connection and try again.';
+          formStatus.classList.remove('hidden', 'bg-primary');
+          formStatus.classList.add('bg-destructive', 'text-destructive-foreground');
+        } finally {
+          // Re-enable submit button
+          submitButton.disabled = false;
+          submitButton.textContent = 'Send Message';
+        }
+      });
+    </script>
+  </body>
+</html>
