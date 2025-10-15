@@ -36,7 +36,10 @@ const listings = await shopListingService.getAll();
           <a href="/" class="text-2xl font-bold hover-accent">Producer</a>
           <div class="flex items-center gap-6">
             <a href="/shop" class="text-sm font-medium text-primary flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4" /> Shop
+              Shop
+            </a>
+            <a href="/cart" class="text-sm font-medium hover-accent flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" /> Cart <span id="cart-count" class="text-xs px-2 py-0.5 bg-primary text-primary-foreground rounded-full">0</span>
             </a>
             <a href="/contact" class="text-sm font-medium hover-accent flex items-center gap-2">
               <Mail className="w-4 h-4" /> Contact
@@ -112,17 +115,27 @@ const listings = await shopListingService.getAll();
                     {listing.key && <span class="text-muted-foreground">{listing.key}</span>}
                   </div>
 
-                  {/* Price and Buy button */}
-                  <div class="flex items-center justify-between pt-2 border-t border-border">
-                    <span class="text-xl font-bold text-primary">
-                      ${listing.price ? Number(listing.price).toFixed(2) : '0.00'}
-                    </span>
-                    <a 
-                      href={`/api/create-checkout-session?listing_id=${listing.id}`}
-                      class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
-                    >
-                      Buy Now
-                    </a>
+                  {/* Price and action buttons */}
+                  <div class="pt-2 border-t border-border space-y-2">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xl font-bold text-primary">
+                        ${listing.price ? Number(listing.price).toFixed(2) : '0.00'}
+                      </span>
+                    </div>
+                    <div class="flex gap-2">
+                      <button 
+                        onclick={`addToCart(${listing.id})`}
+                        class="flex-1 px-4 py-2 bg-card border border-primary text-primary rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors font-medium"
+                      >
+                        Add to Cart
+                      </button>
+                      <a 
+                        href={`/api/create-checkout-session?listing_id=${listing.id}`}
+                        class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-center"
+                      >
+                        Buy Now
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -172,6 +185,51 @@ const listings = await shopListingService.getAll();
           currentAudio = player;
         }
       };
+
+      // Add to cart functionality
+      (window as any).addToCart = async function(id: number) {
+        try {
+          const response = await fetch('/api/cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, action: 'add' }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Update cart count
+            const cartCount = document.getElementById('cart-count');
+            if (cartCount) {
+              cartCount.textContent = data.cart.length.toString();
+            }
+            // Show success message
+            alert('Added to cart!');
+          } else {
+            alert('Failed to add to cart. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error adding to cart:', error);
+          alert('An error occurred. Please try again.');
+        }
+      };
+
+      // Load cart count on page load
+      async function loadCartCount() {
+        try {
+          const response = await fetch('/api/cart');
+          if (response.ok) {
+            const data = await response.json();
+            const cartCount = document.getElementById('cart-count');
+            if (cartCount) {
+              cartCount.textContent = data.cart.length.toString();
+            }
+          }
+        } catch (error) {
+          console.error('Error loading cart:', error);
+        }
+      }
+
+      loadCartCount();
     </script>
   </body>
 </html>

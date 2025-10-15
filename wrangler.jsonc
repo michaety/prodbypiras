@@ -20,4 +20,16 @@
       "database_id": "786d2f1f-fff0-4fc9-ac98-8c137f0d36d5"
     }
   ],
+  "kv_namespaces": [
+    {
+      "binding": "NAMESPACE",
+      "id": "namespace"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "UPLOADS",
+      "bucket_name": "piras-uploads"
+    }
+  ]
 }

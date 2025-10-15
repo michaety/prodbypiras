@@ -5,24 +5,46 @@ export const prerender = false;
 
 export async function GET({ request, locals, url }) {
   try {
-    const { STRIPE_SECRET_KEY, DB } = locals.runtime.env;
+    const { STRIPE_SECRET_KEY, DB, NAMESPACE } = locals.runtime.env;
 
-    // Get listing ID from query params
+    // Check if this is a cart checkout or single item
+    const isCartCheckout = url.searchParams.get("cart") === "true";
     const listingId = url.searchParams.get("listing_id");
 
-    if (!listingId) {
-      return new Response("Missing listing_id parameter", { status: 400 });
-    }
+    let items: any[] = [];
 
-    // Fetch listing from D1
-    const listing = await DB.prepare(
-      "SELECT * FROM shop_listings WHERE id = ?"
-    )
-      .bind(listingId)
-      .first();
+    if (isCartCheckout) {
+      // Get cart items from KV
+      const cartJson = await NAMESPACE.get("cart");
+      const cartIds = cartJson ? JSON.parse(cartJson) : [];
 
-    if (!listing) {
-      return new Response("Listing not found", { status: 404 });
+      if (cartIds.length === 0) {
+        return new Response("Cart is empty", { status: 400 });
+      }
+
+      // Fetch listings for cart items
+      const placeholders = cartIds.map(() => '?').join(',');
+      const query = `SELECT * FROM shop_listings WHERE id IN (${placeholders})`;
+      const { results } = await DB.prepare(query).bind(...cartIds).all();
+      items = results;
+    } else {
+      // Single item checkout
+      if (!listingId) {
+        return new Response("Missing listing_id parameter", { status: 400 });
+      }
+
+      // Fetch listing from D1
+      const listing = await DB.prepare(
+        "SELECT * FROM shop_listings WHERE id = ?"
+      )
+        .bind(listingId)
+        .first();
+
+      if (!listing) {
+        return new Response("Listing not found", { status: 404 });
+      }
+
+      items = [listing];
     }
 
     // Check if Stripe is configured
@@ -33,33 +55,50 @@ export async function GET({ request, locals, url }) {
       );
     }
 
+    const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+
     // In a real implementation, you would call Stripe's API here
     // For now, we'll return a placeholder response
     // This is where you'd integrate with Stripe Checkout:
     /*
     const stripe = new Stripe(STRIPE_SECRET_KEY);
     const session = await stripe.checkout.sessions.create({
-      line_items: [{
+      line_items: items.map(item => ({
         price_data: {
           currency: 'usd',
           product_data: {
-            name: listing.title,
-            description: listing.description || '',
-            images: listing.image_url ? [listing.image_url] : [],
+            name: item.title,
+            description: item.description || '',
+            images: item.image_url ? [item.image_url] : [],
           },
-          unit_amount: Math.round(listing.price * 100), // Convert to cents
+          unit_amount: Math.round(item.price * 100), // Convert to cents
         },
         quantity: 1,
-      }],
+      })),
       mode: 'payment',
       success_url: `${url.origin}/shop?success=true`,
-      cancel_url: `${url.origin}/shop?canceled=true`,
+      cancel_url: `${url.origin}/${isCartCheckout ? 'cart' : 'shop'}?canceled=true`,
     });
+    
+    // Clear cart after successful checkout
+    if (isCartCheckout) {
+      await NAMESPACE.put("cart", JSON.stringify([]));
+    }
     
     return Response.redirect(session.url, 303);
     */
 
     // For now, redirect to a placeholder or show instructions
+    const itemsList = items.map(item => `
+      <div style="background: #2a3441; padding: 15px; border-radius: 6px; margin: 10px 0;">
+        <h3 style="margin: 0 0 10px 0;">${item.title}</h3>
+        <div style="color: #94a3b8; font-size: 0.9em;">
+          ${item.type} ${item.bpm ? `• ${item.bpm} BPM` : ''} ${item.key ? `• ${item.key}` : ''}
+        </div>
+        <div style="color: #ffcc00; font-size: 1.2em; margin-top: 10px;">$${Number(item.price).toFixed(2)}</div>
+      </div>
+    `).join('');
+
     return new Response(
       `
       <!DOCTYPE html>
@@ -67,7 +106,7 @@ export async function GET({ request, locals, url }) {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Checkout - ${listing.title}</title>
+          <title>Checkout</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -84,8 +123,7 @@ export async function GET({ request, locals, url }) {
               padding: 30px;
             }
             h1 { color: #ffcc00; margin-top: 0; }
-            .price { font-size: 2em; color: #ffcc00; margin: 20px 0; }
-            .info { color: #94a3b8; margin: 10px 0; }
+            .total { font-size: 2em; color: #ffcc00; margin: 20px 0; border-top: 2px solid #2a3441; padding-top: 20px; }
             a {
               display: inline-block;
               background: #ffcc00;
@@ -109,11 +147,9 @@ export async function GET({ request, locals, url }) {
         </head>
         <body>
           <div class="card">
-            <h1>Checkout: ${listing.title}</h1>
-            <div class="info">Type: ${listing.type}</div>
-            ${listing.bpm ? `<div class="info">BPM: ${listing.bpm}</div>` : ""}
-            ${listing.key ? `<div class="info">Key: ${listing.key}</div>` : ""}
-            <div class="price">$${Number(listing.price).toFixed(2)}</div>
+            <h1>Checkout${isCartCheckout ? ' - Cart Items' : ''}</h1>
+            ${itemsList}
+            <div class="total">Total: $${total.toFixed(2)}</div>
             
             <div class="note">
               <strong>⚠️ Stripe Integration Required</strong><br>
@@ -125,7 +161,7 @@ export async function GET({ request, locals, url }) {
               </ol>
             </div>
             
-            <a href="/shop">← Back to Shop</a>
+            <a href="${isCartCheckout ? '/cart' : '/shop'}">← Back</a>
           </div>
         </body>
       </html>
