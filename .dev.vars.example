@@ -1,1 +1,2 @@
 API_TOKEN=your_token_here
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here

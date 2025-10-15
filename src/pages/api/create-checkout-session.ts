@@ -1,5 +1,6 @@
 // API endpoint for creating Stripe checkout sessions
 // This handles the "Buy Now" button click on shop listings
+import Stripe from 'stripe';
 
 export const prerender = false;
 
@@ -57,11 +58,12 @@ export async function GET({ request, locals, url }) {
 
     const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
 
-    // In a real implementation, you would call Stripe's API here
-    // For now, we'll return a placeholder response
-    // This is where you'd integrate with Stripe Checkout:
-    /*
-    const stripe = new Stripe(STRIPE_SECRET_KEY);
+    // Initialize Stripe with secret key
+    const stripe = new Stripe(STRIPE_SECRET_KEY, {
+      apiVersion: '2024-11-20.acacia',
+    });
+
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       line_items: items.map(item => ({
         price_data: {
@@ -71,7 +73,7 @@ export async function GET({ request, locals, url }) {
             description: item.description || '',
             images: item.image_url ? [item.image_url] : [],
           },
-          unit_amount: Math.round(item.price * 100), // Convert to cents
+          unit_amount: Math.round(Number(item.price) * 100), // Convert to cents
         },
         quantity: 1,
       })),
@@ -80,15 +82,15 @@ export async function GET({ request, locals, url }) {
       cancel_url: `${url.origin}/${isCartCheckout ? 'cart' : 'shop'}?canceled=true`,
     });
     
-    // Clear cart after successful checkout
+    // Clear cart after successful checkout session creation
     if (isCartCheckout) {
       await NAMESPACE.put("cart", JSON.stringify([]));
     }
     
+    // Redirect to Stripe checkout
     return Response.redirect(session.url, 303);
-    */
 
-    // For now, redirect to a placeholder or show instructions
+    /* For testing without Stripe, uncomment this section and comment out the Stripe code above:
     const itemsList = items.map(item => `
       <div style="background: #2a3441; padding: 15px; border-radius: 6px; margin: 10px 0;">
         <h3 style="margin: 0 0 10px 0;">${item.title}</h3>
@@ -173,6 +175,7 @@ export async function GET({ request, locals, url }) {
         },
       }
     );
+    */
   } catch (error) {
     console.error("Error creating checkout session:", error);
     return new Response("Internal server error", { status: 500 });

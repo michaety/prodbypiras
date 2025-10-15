@@ -14,8 +14,12 @@ A complete admin dashboard template built with Astro, Shadcn UI, and Cloudflare'
 - 🔐 Built-in API with token authentication
 - 👥 Customer management
 - 💳 Subscription tracking
+- 🛒 E-commerce shop with Stripe integration
+- 🖼️ Automatic image conversion to WebP format
+- 🎵 Audio preview support with proper MIME types
 - 🚀 Deploy to Cloudflare Workers
 - 📦 Powered by Cloudflare D1 database
+- 💾 File storage with Cloudflare R2
 - ✨ Clean, responsive interface
 - 🔍 Data validation with Zod
 
@@ -47,13 +51,16 @@ npm install
 cp .dev.vars.example .dev.vars
 ```
 
-Add your API token:
+Add your API token and Stripe secret key:
 
 ```
 API_TOKEN=your_token_here
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
 ```
 
 _An API token is required to authenticate requests to the API. You should generate this before trying to run the project locally or deploying it._
+
+_For Stripe integration: Get your Stripe secret key from the [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys). Use test keys (starting with `sk_test_`) for development and live keys (starting with `sk_live_`) for production._
 
 3. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "admin-db":
 
@@ -95,10 +102,14 @@ npm run deploy
 $ npm run db:migrate:remote
 ```
 
-8. Set your production API token:
+8. Set your production secrets:
 
 ```bash
+# Set API token
 npx wrangler secret put API_TOKEN
+
+# Set Stripe secret key for production payments
+npx wrangler secret put STRIPE_SECRET_KEY
 ```
 
 ## Usage
