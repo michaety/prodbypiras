@@ -97,11 +97,21 @@ npm install
 1. Go to Cloudflare Dashboard → R2
 2. Create bucket named "piras-uploads"
 3. Bind it as "UPLOADS" in your Worker settings
+4. (Optional) Enable public access for direct file serving:
+   - Go to bucket Settings → Public access
+   - Enable "Allow Access"
+   - Copy the public bucket URL (e.g., `https://pub-xxxxx.r2.dev`)
+5. (Optional) Set up custom domain for better branding:
+   - Click "Connect Domain" in bucket settings
+   - Add your custom domain (e.g., `uploads.yourdomain.com`)
 
 #### Environment Variables (Secrets)
 Set these in Worker Settings → Variables:
 - `STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key
 - `STRIPE_SECRET_KEY`: Your Stripe secret key
+- `R2_PUBLIC_URL`: (Optional) Your R2 bucket public URL or custom domain
+  - Example: `https://pub-xxxxx.r2.dev` or `https://uploads.yourdomain.com`
+  - If not set, files are served through Worker proxy at `/api/uploads/[path]`
 
 ### 3. Run Database Migrations
 
@@ -136,7 +146,19 @@ Use the Cloudflare Dashboard to deploy:
 
 ### Adding Your First Listing
 
-Since the "Add New Listing" form isn't implemented yet, you can add listings directly to D1:
+You can add listings through the admin interface at `/admin/listings/new`:
+
+1. Navigate to `/admin` in your browser
+2. Click "Add New Listing" or go to `/admin/listings/new`
+3. Fill in the listing details:
+   - Title, type (beats/stems/samples/pack), price
+   - Optional: BPM, key, length, description
+   - Upload cover image (will be auto-converted to WebP)
+   - Upload audio preview (should be pre-trimmed to ~20 seconds)
+   - Optionally add track files for packs/stems
+4. Click "Create Listing"
+
+Alternatively, you can add listings directly to D1:
 
 ```sql
 INSERT INTO shop_listings 
@@ -149,15 +171,25 @@ Or use the D1 API to insert data programmatically.
 
 ### Uploading Media
 
-For images and audio files:
-1. Upload to your R2 bucket "piras-uploads"
-2. Get the public URL
-3. Store the URL in the `image_url`, `preview_audio_url`, or `audio_url` fields
+Media uploads are handled automatically through the admin interface:
 
-Example R2 URL structure:
-```
-https://piras-uploads.your-account.r2.cloudflarestorage.com/beat-cover.jpg
-```
+**Images:**
+- Upload any image format (JPG, PNG, GIF, etc.)
+- System automatically converts to WebP format
+- Images are resized to max 1920px
+- Compressed with 85% quality
+- Stored in R2 at `images/[timestamp]_[filename].webp`
+
+**Audio:**
+- Upload audio files (MP3, WAV, OGG, M4A)
+- Pre-trim preview audio to ~20 seconds for best results
+- Stored in R2 at `audio/previews/[timestamp]_[filename]`
+
+**How Files Are Served:**
+- If `R2_PUBLIC_URL` is set: Direct from R2 (faster)
+- If not set: Through Worker proxy at `/api/uploads/[path]` (works immediately)
+
+See `MEDIA_GUIDE.md` for detailed media upload instructions.
 
 ### Managing Content
 
@@ -218,18 +250,21 @@ If listings don't show:
 3. Check browser console for API errors
 
 ### Images Not Loading
-1. Verify R2 bucket is public or has correct CORS settings
-2. Check image URLs are valid and accessible
-3. Ensure R2 binding is configured correctly
+1. Clear browser cache (may have cached old upload code)
+2. Check Workers logs in Cloudflare Dashboard
+3. Verify R2 bucket binding is configured correctly in wrangler.jsonc
+4. If using R2_PUBLIC_URL, verify the URL is correct
+5. Test accessing file directly: `/api/uploads/images/[filename]`
+6. Check browser console for specific errors
 
 ## Next Steps
 
-1. **Add Form UI**: Create forms for adding/editing listings
-2. **Upload Handler**: Add API for uploading files to R2
-3. **Auth**: Add authentication to protect admin pages
-4. **Search**: Add search/filter functionality to shop
-5. **Cart**: Add shopping cart for multiple purchases
-6. **Analytics**: Track page views and purchases
+1. **Auth**: Add authentication to protect admin pages
+2. **Edit Listings**: Add UI for editing existing listings
+3. **Search**: Add search/filter functionality to shop
+4. **Cart**: Add shopping cart for multiple purchases
+5. **Analytics**: Track page views and purchases
+6. **Audio Trimming**: Consider adding client-side audio trimming using Web Audio API
 
 ## Support
 

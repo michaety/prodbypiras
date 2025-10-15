@@ -1,39 +1,43 @@
 // API endpoint for adding new shop listings
 import { z } from "zod";
-import imageCompression from 'browser-image-compression';
 
 export const prerender = false;
 
-// Helper function to convert image to WebP format
-async function convertImageToWebP(file: File): Promise<Blob> {
-  try {
-    // Convert to WebP using browser-image-compression
-    const options = {
-      maxSizeMB: 1,
-      maxWidthOrHeight: 1920,
-      useWebWorker: false,
-      fileType: 'image/webp' as const,
-    };
-    
-    const compressedBlob = await imageCompression(file, options);
-    return compressedBlob;
-  } catch (error) {
-    console.error('Error converting image to WebP:', error);
-    throw error;
+// Helper function to get file extension and determine content type
+function getImageContentType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'webp':
+      return 'image/webp';
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    default:
+      return 'image/jpeg';
   }
 }
 
-// Helper function to generate audio preview (20 seconds)
-// Note: This is a simplified version. In production, you'd use FFmpeg or a similar tool
-// For now, we'll just upload the full audio file as the preview
-// To implement proper audio trimming, you would need to:
-// 1. Use ffmpeg.wasm in the browser
-// 2. Or process on the server-side with a proper audio library
-async function generateAudioPreview(file: File): Promise<File> {
-  // For now, return the original file
-  // TODO: Implement actual audio trimming to 20 seconds using ffmpeg.wasm
-  // This would require adding @ffmpeg/ffmpeg and @ffmpeg/util packages
-  return file;
+// Helper function to get audio content type
+function getAudioContentType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'mp3':
+      return 'audio/mpeg';
+    case 'wav':
+      return 'audio/wav';
+    case 'ogg':
+      return 'audio/ogg';
+    case 'm4a':
+      return 'audio/mp4';
+    case 'aac':
+      return 'audio/aac';
+    default:
+      return 'audio/mpeg';
+  }
 }
 
 // Zod schema for validation
@@ -85,51 +89,69 @@ export async function POST({ request, locals }) {
       featured,
     });
 
-    // Handle cover photo upload with WebP conversion
+    // Handle cover photo upload
+    // Note: WebP conversion happens on the client-side before upload
     let imageUrl = null;
     const coverPhoto = formData.get("cover_photo") as File | null;
     if (coverPhoto && coverPhoto.size > 0) {
-      // Convert image to WebP format
-      const webpBlob = await convertImageToWebP(coverPhoto);
-      const webpFilename = coverPhoto.name.replace(/\.[^/.]+$/, '.webp');
-      const imageKey = `images/${Date.now()}_${webpFilename}`;
+      // Generate unique filename
+      const timestamp = Date.now();
+      const imageKey = `images/${timestamp}_${coverPhoto.name}`;
+      
+      // Get proper content type
+      const contentType = getImageContentType(coverPhoto.name);
+      
+      // Read file as ArrayBuffer for Workers compatibility
+      const arrayBuffer = await coverPhoto.arrayBuffer();
       
       // Upload to R2 with proper content type
-      await UPLOADS.put(imageKey, webpBlob, {
-        httpMetadata: {
-          contentType: 'image/webp',
-        },
-      });
-      
-      // Construct public URL - Using R2 bucket binding, files are accessible via custom domain
-      // Update this URL based on your actual R2 bucket configuration
-      imageUrl = `https://uploads.example.com/${imageKey}`;
-    }
-
-    // Handle preview audio upload with preview generation
-    let previewAudioUrl = null;
-    const previewAudio = formData.get("preview_audio") as File | null;
-    if (previewAudio && previewAudio.size > 0) {
-      // Generate 20-second preview (currently returns full file - see helper function for TODO)
-      const previewFile = await generateAudioPreview(previewAudio);
-      const audioKey = `audio/previews/${Date.now()}_${previewAudio.name}`;
-      
-      // Detect MIME type based on file extension
-      const fileExtension = previewAudio.name.split('.').pop()?.toLowerCase();
-      let contentType = 'audio/mpeg'; // default
-      if (fileExtension === 'wav') contentType = 'audio/wav';
-      else if (fileExtension === 'ogg') contentType = 'audio/ogg';
-      else if (fileExtension === 'mp3') contentType = 'audio/mpeg';
-      else if (fileExtension === 'm4a') contentType = 'audio/mp4';
-      
-      await UPLOADS.put(audioKey, previewFile.stream(), {
+      await UPLOADS.put(imageKey, arrayBuffer, {
         httpMetadata: {
           contentType,
         },
       });
       
-      // Construct public URL - adjust based on your R2 bucket configuration
-      previewAudioUrl = `https://uploads.example.com/${audioKey}`;
+      // Construct public URL using R2 public bucket URL
+      // The R2 bucket should be configured with public access or custom domain
+      // Get the public URL from environment variable or use the proxy endpoint
+      const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL;
+      if (r2PublicUrl) {
+        imageUrl = `${r2PublicUrl}/${imageKey}`;
+      } else {
+        // Fallback: Use the Worker proxy endpoint to serve R2 files
+        imageUrl = `/api/uploads/${imageKey}`;
+      }
+    }
+
+    // Handle preview audio upload
+    // Note: Audio should be pre-trimmed to ~20 seconds before upload (client-side or manually)
+    let previewAudioUrl = null;
+    const previewAudio = formData.get("preview_audio") as File | null;
+    if (previewAudio && previewAudio.size > 0) {
+      const timestamp = Date.now();
+      const audioKey = `audio/previews/${timestamp}_${previewAudio.name}`;
+      
+      // Get proper content type
+      const contentType = getAudioContentType(previewAudio.name);
+      
+      // Read file as ArrayBuffer for Workers compatibility
+      const arrayBuffer = await previewAudio.arrayBuffer();
+      
+      // Upload to R2 with proper content type
+      await UPLOADS.put(audioKey, arrayBuffer, {
+        httpMetadata: {
+          contentType,
+        },
+      });
+      
+      // Construct public URL
+      const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL;
+      if (r2PublicUrl) {
+        previewAudioUrl = `${r2PublicUrl}/${audioKey}`;
+      } else {
+        // Fallback: Use the Worker proxy endpoint to serve R2 files
+        previewAudioUrl = `/api/uploads/${audioKey}`;
+      }
     }
 
     // Insert listing into database
@@ -174,22 +196,25 @@ export async function POST({ request, locals }) {
       // Upload and save track files
       for (let i = 0; i < trackFiles.length; i++) {
         const { title: trackTitle, file } = trackFiles[i];
-        const trackKey = `tracks/${Date.now()}_${i}_${file.name}`;
+        const timestamp = Date.now();
+        const trackKey = `tracks/${timestamp}_${i}_${file.name}`;
         
-        // Detect MIME type for track files
-        const fileExtension = file.name.split('.').pop()?.toLowerCase();
-        let contentType = 'audio/mpeg'; // default
-        if (fileExtension === 'wav') contentType = 'audio/wav';
-        else if (fileExtension === 'ogg') contentType = 'audio/ogg';
-        else if (fileExtension === 'mp3') contentType = 'audio/mpeg';
-        else if (fileExtension === 'm4a') contentType = 'audio/mp4';
+        // Get proper content type
+        const contentType = getAudioContentType(file.name);
         
-        await UPLOADS.put(trackKey, file.stream(), {
+        // Read file as ArrayBuffer for Workers compatibility
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // Upload to R2 with proper content type
+        await UPLOADS.put(trackKey, arrayBuffer, {
           httpMetadata: {
             contentType,
           },
         });
-        const trackUrl = `https://uploads.example.com/${trackKey}`;
+        
+        // Construct public URL
+        const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL;
+        const trackUrl = r2PublicUrl ? `${r2PublicUrl}/${trackKey}` : `/api/uploads/${trackKey}`;
 
         // Insert track into database
         await DB.prepare(
