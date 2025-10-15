@@ -1,2 +1,3 @@
 API_TOKEN=your_token_here
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
+R2_PUBLIC_URL=https://your-r2-bucket-public-url.r2.dev
