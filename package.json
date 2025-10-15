@@ -53,6 +53,6 @@
   "dev": "npm run db:migrate && npm run build && npm run wrangler:wrapper && wrangler dev --port 4321",
   "predeploy": "npm run db:migrate:remote",
   "preview": "npm run build && npm run wrangler:wrapper && wrangler dev",
-  "wrangler:wrapper": "cp src/workflows/wrapper.js dist/_worker.js
+  "wrangler:wrapper": "cp src/workflows/wrapper.js dist/_worker.js"
 }
 }
