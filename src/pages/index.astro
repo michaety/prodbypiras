@@ -2,7 +2,7 @@
 // Portfolio landing page for music producer
 import '@/styles/globals.css';
 import { ShopListingService } from '@/lib/services/shop-listing';
-import { Music, ShoppingCart, Mail, Instagram, Twitter, Youtube } from 'lucide-react';
+import { Music, ShoppingCart, Mail, Instagram, Twitter, Youtube, Cloud } from 'lucide-react';
 
 export const prerender = false;
 
@@ -72,7 +72,7 @@ const featuredListings = await shopListingService.getFeatured();
           <a href="https://soundcloud.com" target="_blank" rel="noopener noreferrer"
              class="p-3 bg-card hover:bg-primary hover:text-primary-foreground rounded-full transition-colors"
              aria-label="SoundCloud">
-            <Music className="w-6 h-6" />
+            <Cloud className="w-6 h-6" />
           </a>
           <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"
              class="p-3 bg-card hover:bg-primary hover:text-primary-foreground rounded-full transition-colors"
