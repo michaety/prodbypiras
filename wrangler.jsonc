@@ -20,11 +20,4 @@
       "database_id": "786d2f1f-fff0-4fc9-ac98-8c137f0d36d5"
     }
   ],
-  "workflows": [
-    {
-      "name": "saas-admin-template-customer-workflow",
-      "binding": "CUSTOMER_WORKFLOW",
-      "class_name": "CustomerWorkflow"
-    }
-  ]
 }
