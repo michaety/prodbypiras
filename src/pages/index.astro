@@ -35,8 +35,9 @@ const featuredListings = await shopListingService.getFeatured();
         <div class="flex items-center justify-between">
           <a href="/" class="text-2xl font-bold hover-accent">Producer</a>
           <div class="flex items-center gap-6">
-            <a href="/shop" class="text-sm font-medium hover-accent flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4" /> Shop
+            <a href="/shop" class="text-sm font-medium hover-accent">Shop</a>
+            <a href="/cart" class="text-sm font-medium hover-accent flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" /> Cart
             </a>
             <a href="/contact" class="text-sm font-medium hover-accent flex items-center gap-2">
               <Mail className="w-4 h-4" /> Contact
@@ -89,10 +90,13 @@ const featuredListings = await shopListingService.getFeatured();
       </div>
     </section>
 
-    <!-- Featured Tracks Grid -->
+    <!-- Featured Tracks Portfolio Grid -->
     <section class="container mx-auto px-6 py-16">
       <div class="flex items-center justify-between mb-8">
-        <h2 class="text-3xl font-bold">Featured Tracks</h2>
+        <div>
+          <h2 class="text-3xl font-bold">Featured Portfolio</h2>
+          <p class="text-muted-foreground mt-2">High-quality beats, samples, and production work</p>
+        </div>
         <a href="/shop" class="text-primary hover:underline flex items-center gap-2">
           View All <ShoppingCart className="w-4 h-4" />
         </a>
@@ -101,34 +105,73 @@ const featuredListings = await shopListingService.getFeatured();
       {featuredListings.length > 0 ? (
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {featuredListings.map((listing: any) => (
-            <a href={`/shop?id=${listing.id}`} class="group block">
-              <div class="bg-card rounded-lg overflow-hidden border border-border hover:border-primary transition-colors">
-                {listing.image_url ? (
-                  <img 
-                    src={listing.image_url} 
-                    alt={listing.title}
-                    class="w-full aspect-square object-cover"
-                  />
-                ) : (
-                  <div class="w-full aspect-square bg-muted flex items-center justify-center">
-                    <Music className="w-16 h-16 text-muted-foreground" />
-                  </div>
-                )}
-                <div class="p-4 space-y-2">
-                  <h3 class="font-semibold text-lg group-hover:text-primary transition-colors">
-                    {listing.title}
-                  </h3>
-                  <div class="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span class="px-2 py-1 bg-muted rounded">{listing.type}</span>
-                    {listing.bpm && <span>{listing.bpm} BPM</span>}
-                    {listing.key && <span>{listing.key}</span>}
-                  </div>
-                  {listing.price && (
-                    <p class="text-lg font-bold text-primary">${listing.price}</p>
+            <div class="group">
+              <div class="bg-card rounded-lg overflow-hidden border border-border hover:border-primary transition-all hover:shadow-lg hover:shadow-primary/20">
+                {/* Image with Audio Preview Overlay */}
+                <div class="relative">
+                  {listing.image_url ? (
+                    <img 
+                      src={listing.image_url} 
+                      alt={listing.title}
+                      class="w-full aspect-square object-cover"
+                    />
+                  ) : (
+                    <div class="w-full aspect-square bg-muted flex items-center justify-center">
+                      <Music className="w-16 h-16 text-muted-foreground" />
+                    </div>
+                  )}
+                  {/* Audio Preview Button */}
+                  {listing.preview_audio_url && (
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button 
+                        class="bg-primary text-primary-foreground p-4 rounded-full hover:scale-110 transition-transform"
+                        onclick={`playPreview('${listing.preview_audio_url}')`}
+                        aria-label="Play preview"
+                      >
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </button>
+                    </div>
                   )}
                 </div>
+
+                {/* Details */}
+                <div class="p-4 space-y-3">
+                  <div>
+                    <h3 class="font-semibold text-lg group-hover:text-primary transition-colors">
+                      {listing.title}
+                    </h3>
+                    {listing.description && (
+                      <p class="text-sm text-muted-foreground line-clamp-2 mt-1">
+                        {listing.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Metadata */}
+                  <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="px-2 py-1 bg-muted rounded font-medium">{listing.type}</span>
+                    {listing.length && <span class="text-muted-foreground">{listing.length}</span>}
+                    {listing.bpm && <span class="text-muted-foreground">{listing.bpm} BPM</span>}
+                    {listing.key && <span class="text-muted-foreground">{listing.key}</span>}
+                  </div>
+                  
+                  {/* Price and CTA */}
+                  <div class="flex items-center justify-between pt-2 border-t border-border">
+                    {listing.price && (
+                      <span class="text-xl font-bold text-primary">${Number(listing.price).toFixed(2)}</span>
+                    )}
+                    <a 
+                      href="/shop"
+                      class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                    >
+                      View Details
+                    </a>
+                  </div>
+                </div>
               </div>
-            </a>
+            </div>
           ))}
         </div>
       ) : (
@@ -138,6 +181,33 @@ const featuredListings = await shopListingService.getFeatured();
         </div>
       )}
     </section>
+
+    <!-- Audio preview player (hidden) -->
+    <audio id="preview-player" class="hidden"></audio>
+
+    <script>
+      // Audio preview functionality
+      let currentAudio: HTMLAudioElement | null = null;
+
+      (window as any).playPreview = function(url: string) {
+        const player = document.getElementById('preview-player') as HTMLAudioElement;
+        if (!player) return;
+
+        if (currentAudio && currentAudio.src === url && !currentAudio.paused) {
+          // Pause if already playing
+          currentAudio.pause();
+          currentAudio = null;
+        } else {
+          // Play new audio
+          if (currentAudio) {
+            currentAudio.pause();
+          }
+          player.src = url;
+          player.play();
+          currentAudio = player;
+        }
+      };
+    </script>
 
     <!-- Footer -->
     <footer class="border-t border-border mt-20">

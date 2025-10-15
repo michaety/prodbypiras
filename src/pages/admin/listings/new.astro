@@ -1,0 +1,338 @@
+---
+// Add new listing form page
+import Layout from '@/layouts/Layout.astro';
+import { ArrowLeft } from 'lucide-react';
+
+export const prerender = false;
+---
+
+<Layout title="Add New Listing">
+  <div class="max-w-4xl">
+    <!-- Back Button -->
+    <a 
+      href="/admin"
+      class="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+    >
+      <ArrowLeft className="w-4 h-4" /> Back to Listings
+    </a>
+
+    <!-- Form Card -->
+    <div class="bg-card rounded-lg border border-border p-8">
+      <h1 class="text-3xl font-bold mb-6">Add New Listing</h1>
+      
+      <form 
+        id="add-listing-form"
+        action="/api/admin/add-listing"
+        method="POST"
+        enctype="multipart/form-data"
+        class="space-y-6"
+      >
+        <!-- Basic Information -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold">Basic Information</h2>
+          
+          <div>
+            <label for="title" class="block text-sm font-medium mb-2">
+              Title <span class="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              required
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="e.g., Dark Trap Beat"
+            />
+          </div>
+
+          <div>
+            <label for="type" class="block text-sm font-medium mb-2">
+              Type <span class="text-destructive">*</span>
+            </label>
+            <select
+              id="type"
+              name="type"
+              required
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Select a type</option>
+              <option value="beats">Beats</option>
+              <option value="stems">Stems</option>
+              <option value="samples">Samples</option>
+              <option value="pack">Pack</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="description" class="block text-sm font-medium mb-2">
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows="3"
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Describe your product..."
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Music Details -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold">Music Details</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label for="length" class="block text-sm font-medium mb-2">
+                Length
+              </label>
+              <input
+                type="text"
+                id="length"
+                name="length"
+                class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g., 3:45"
+              />
+            </div>
+
+            <div>
+              <label for="bpm" class="block text-sm font-medium mb-2">
+                BPM
+              </label>
+              <input
+                type="number"
+                id="bpm"
+                name="bpm"
+                min="0"
+                max="300"
+                class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g., 140"
+              />
+            </div>
+
+            <div>
+              <label for="key" class="block text-sm font-medium mb-2">
+                Key
+              </label>
+              <input
+                type="text"
+                id="key"
+                name="key"
+                class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g., Am, G Major"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Pricing -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold">Pricing</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="price" class="block text-sm font-medium mb-2">
+                Price (USD) <span class="text-destructive">*</span>
+              </label>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                step="0.01"
+                min="0"
+                required
+                class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g., 29.99"
+              />
+            </div>
+
+            <div>
+              <label for="stripe_price_id" class="block text-sm font-medium mb-2">
+                Stripe Price ID
+              </label>
+              <input
+                type="text"
+                id="stripe_price_id"
+                name="stripe_price_id"
+                class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="price_xxxxx (optional)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Media Files -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold">Media Files</h2>
+          
+          <div>
+            <label for="cover_photo" class="block text-sm font-medium mb-2">
+              Cover Photo
+            </label>
+            <input
+              type="file"
+              id="cover_photo"
+              name="cover_photo"
+              accept="image/*"
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              Recommended: Square image, min 600x600px
+            </p>
+          </div>
+
+          <div>
+            <label for="preview_audio" class="block text-sm font-medium mb-2">
+              Preview Audio
+            </label>
+            <input
+              type="file"
+              id="preview_audio"
+              name="preview_audio"
+              accept="audio/*"
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              Audio preview for customers to listen before purchase
+            </p>
+          </div>
+        </div>
+
+        <!-- Track Files (for packs/stems) -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold">Track Files (Optional)</h2>
+          <p class="text-sm text-muted-foreground">
+            Upload individual track files for packs or stems. You can add these later by editing the listing.
+          </p>
+          
+          <div id="track-files-container" class="space-y-3">
+            <!-- Track files will be added dynamically -->
+          </div>
+
+          <button
+            type="button"
+            id="add-track-file"
+            class="px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:border-primary transition-colors"
+          >
+            + Add Track File
+          </button>
+        </div>
+
+        <!-- Display Options -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold">Display Options</h2>
+          
+          <div class="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="featured"
+              name="featured"
+              value="1"
+              class="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+            />
+            <label for="featured" class="text-sm font-medium">
+              Feature on portfolio page
+            </label>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex gap-4 pt-6 border-t border-border">
+          <button
+            type="submit"
+            class="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+          >
+            Create Listing
+          </button>
+          <a
+            href="/admin"
+            class="px-6 py-3 bg-card border border-border rounded-lg font-semibold hover:border-primary transition-colors"
+          >
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Track file counter
+    let trackFileCount = 0;
+
+    // Add track file input
+    document.getElementById('add-track-file')?.addEventListener('click', () => {
+      trackFileCount++;
+      const container = document.getElementById('track-files-container');
+      if (!container) return;
+
+      const trackFileDiv = document.createElement('div');
+      trackFileDiv.className = 'flex gap-3 items-start bg-background border border-border rounded-lg p-4';
+      trackFileDiv.innerHTML = `
+        <div class="flex-1 space-y-2">
+          <input
+            type="text"
+            name="track_title_${trackFileCount}"
+            placeholder="Track title"
+            class="w-full px-3 py-2 bg-card border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          />
+          <input
+            type="file"
+            name="track_file_${trackFileCount}"
+            accept="audio/*"
+            class="w-full text-sm file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+          />
+        </div>
+        <button
+          type="button"
+          onclick="this.parentElement.remove()"
+          class="p-2 text-muted-foreground hover:text-destructive transition-colors"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      `;
+      container.appendChild(trackFileDiv);
+    });
+
+    // Form submission handling
+    const form = document.getElementById('add-listing-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitButton = form.querySelector('button[type="submit"]');
+      if (submitButton) {
+        submitButton.textContent = 'Creating...';
+        submitButton.setAttribute('disabled', 'true');
+      }
+
+      const formData = new FormData(form as HTMLFormElement);
+
+      try {
+        const response = await fetch('/api/admin/add-listing', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          // Redirect to admin page on success
+          window.location.href = '/admin';
+        } else {
+          const error = await response.text();
+          alert(`Error creating listing: ${error}`);
+          if (submitButton) {
+            submitButton.textContent = 'Create Listing';
+            submitButton.removeAttribute('disabled');
+          }
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        alert('An error occurred. Please try again.');
+        if (submitButton) {
+          submitButton.textContent = 'Create Listing';
+          submitButton.removeAttribute('disabled');
+        }
+      }
+    });
+  </script>
+</Layout>
