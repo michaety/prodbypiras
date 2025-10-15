@@ -5,7 +5,11 @@ declare namespace Cloudflare {
 	interface Env {
 		EXAMPLE_VALUE: "example_value";
 		DB: D1Database;
+		NAMESPACE: KVNamespace;
+		UPLOADS: R2Bucket;
 		CUSTOMER_WORKFLOW: Workflow;
+		STRIPE_PUBLISHABLE_KEY?: string;
+		STRIPE_SECRET_KEY?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

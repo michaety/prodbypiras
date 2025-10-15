@@ -1,0 +1,177 @@
+---
+// Shop page displaying all products (beats, samples, packs)
+import '@/styles/globals.css';
+import { ShopListingService } from '@/lib/services/shop-listing';
+import { Music, ShoppingCart, Mail, Play } from 'lucide-react';
+
+export const prerender = false;
+
+const { DB } = Astro.locals.runtime.env;
+
+// Fetch all shop listings from D1
+const shopListingService = new ShopListingService(DB);
+const listings = await shopListingService.getAll();
+---
+
+<script is:inline>
+  // Theme setup - force dark mode
+  document.documentElement.classList.add('dark');
+</script>
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content="Shop beats, samples, and production packs" />
+    <title>Shop - Producer Portfolio</title>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 backdrop-blur-lg bg-background/80 border-b border-border">
+      <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <a href="/" class="text-2xl font-bold hover-accent">Producer</a>
+          <div class="flex items-center gap-6">
+            <a href="/shop" class="text-sm font-medium text-primary flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" /> Shop
+            </a>
+            <a href="/contact" class="text-sm font-medium hover-accent flex items-center gap-2">
+              <Mail className="w-4 h-4" /> Contact
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Shop Header -->
+    <section class="container mx-auto px-6 py-12">
+      <div class="max-w-3xl">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+          Shop <span class="text-primary">Beats & Samples</span>
+        </h1>
+        <p class="text-lg text-muted-foreground">
+          Browse our collection of high-quality beats, samples, and production packs
+        </p>
+      </div>
+    </section>
+
+    <!-- Shop Grid -->
+    <section class="container mx-auto px-6 pb-16">
+      {listings.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {listings.map((listing: any) => (
+            <div class="group">
+              <div class="bg-card rounded-lg overflow-hidden border border-border hover:border-primary transition-all hover:shadow-lg hover:shadow-primary/20">
+                {/* Image/Cover */}
+                <div class="relative">
+                  {listing.image_url ? (
+                    <img 
+                      src={listing.image_url} 
+                      alt={listing.title}
+                      class="w-full aspect-square object-cover"
+                    />
+                  ) : (
+                    <div class="w-full aspect-square bg-muted flex items-center justify-center">
+                      <Music className="w-16 h-16 text-muted-foreground" />
+                    </div>
+                  )}
+                  {/* Preview audio player overlay */}
+                  {listing.preview_audio_url && (
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button 
+                        class="bg-primary text-primary-foreground p-4 rounded-full hover:scale-110 transition-transform"
+                        onclick={`playPreview('${listing.preview_audio_url}')`}
+                      >
+                        <Play className="w-6 h-6" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Details */}
+                <div class="p-4 space-y-3">
+                  <div>
+                    <h3 class="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">
+                      {listing.title}
+                    </h3>
+                    {listing.description && (
+                      <p class="text-sm text-muted-foreground line-clamp-2 mt-1">
+                        {listing.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Metadata tags */}
+                  <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="px-2 py-1 bg-muted rounded font-medium">{listing.type}</span>
+                    {listing.length && <span class="text-muted-foreground">{listing.length}</span>}
+                    {listing.bpm && <span class="text-muted-foreground">{listing.bpm} BPM</span>}
+                    {listing.key && <span class="text-muted-foreground">{listing.key}</span>}
+                  </div>
+
+                  {/* Price and Buy button */}
+                  <div class="flex items-center justify-between pt-2 border-t border-border">
+                    <span class="text-xl font-bold text-primary">
+                      ${listing.price ? Number(listing.price).toFixed(2) : '0.00'}
+                    </span>
+                    <a 
+                      href={`/api/create-checkout-session?listing_id=${listing.id}`}
+                      class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                    >
+                      Buy Now
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-20 text-muted-foreground">
+          <Music className="w-20 h-20 mx-auto mb-6 opacity-50" />
+          <h2 class="text-2xl font-semibold mb-2">No Products Yet</h2>
+          <p>Check back soon for new beats and samples!</p>
+        </div>
+      )}
+    </section>
+
+    <!-- Audio preview player (hidden) -->
+    <audio id="preview-player" class="hidden"></audio>
+
+    <!-- Footer -->
+    <footer class="border-t border-border mt-20">
+      <div class="container mx-auto px-6 py-8">
+        <p class="text-center text-muted-foreground text-sm">
+          © {new Date().getFullYear()} Producer Portfolio. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Audio preview functionality
+      let currentAudio: HTMLAudioElement | null = null;
+
+      (window as any).playPreview = function(url: string) {
+        const player = document.getElementById('preview-player') as HTMLAudioElement;
+        if (!player) return;
+
+        if (currentAudio && currentAudio.src === url && !currentAudio.paused) {
+          // Pause if already playing
+          currentAudio.pause();
+          currentAudio = null;
+        } else {
+          // Play new audio
+          if (currentAudio) {
+            currentAudio.pause();
+          }
+          player.src = url;
+          player.play();
+          currentAudio = player;
+        }
+      };
+    </script>
+  </body>
+</html>
