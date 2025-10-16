@@ -44,14 +44,18 @@ export async function POST({ request, locals }) {
       // Update sold status for each purchased item
       // Note: We use product name matching since we create prices dynamically
       for (const item of lineItems.data) {
-        if (item.description) {
+        // Stripe line items have the product name in the description field
+        const productName = item.description;
+        if (productName) {
           // Try to match by product name/title
           const result = await DB.prepare(
             'UPDATE shop_listings SET sold = 1 WHERE title = ? AND sold = 0'
-          ).bind(item.description).run();
+          ).bind(productName).run();
           
           if (result.success && result.meta.changes > 0) {
-            console.log(`Marked listing "${item.description}" as sold`);
+            console.log(`Marked listing "${productName}" as sold`);
+          } else {
+            console.warn(`Could not find listing with title "${productName}" to mark as sold`);
           }
         }
       }
