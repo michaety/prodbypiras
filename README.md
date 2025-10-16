@@ -110,7 +110,29 @@ npx wrangler secret put API_TOKEN
 
 # Set Stripe secret key for production payments
 npx wrangler secret put STRIPE_SECRET_KEY
+
+# Set Stripe webhook secret (get from Stripe Dashboard → Webhooks)
+npx wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
+
+## Stripe Payments Integration
+
+This project includes a complete Stripe integration using hosted domains (no custom domain setup required):
+
+- **Checkout**: Single-item and cart purchases redirect to `checkout.stripe.com`
+- **Payment Links**: Generate shareable links on `buy.stripe.com` for products
+- **Customer Portal**: Subscription management on `billing.stripe.com`
+- **Webhooks**: Automatic database updates when payments complete
+
+### Quick Setup
+
+1. Follow the [Quick Start Guide](STRIPE_QUICK_START.md) for 5-minute setup
+2. Set environment variables: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+3. Apply database migration: `npm run db:migrate:remote`
+4. Configure webhook in Stripe Dashboard
+5. Deploy and test
+
+See [STRIPE_HOSTED_SETUP.md](STRIPE_HOSTED_SETUP.md) for detailed setup instructions and [STRIPE_INTEGRATION_SUMMARY.md](STRIPE_INTEGRATION_SUMMARY.md) for architecture details.
 
 ## Usage
 
