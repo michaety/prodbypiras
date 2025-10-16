@@ -7,6 +7,9 @@ import tailwind from "@astrojs/tailwind";
 
 // https://astro.build/config
 export default defineConfig({
+  // Site URL for canonical URLs and SEO
+  // Update this to your custom domain when deployed (e.g., 'https://hevin.dev')
+  site: process.env.SITE_URL || "https://prodbypiras.michaety.workers.dev",
   adapter: cloudflare({
     platformProxy: {
       enabled: true,
