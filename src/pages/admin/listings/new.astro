@@ -186,20 +186,33 @@ export const prerender = false;
         <div class="space-y-4">
           <h2 class="text-xl font-semibold">Track Files <span class="text-destructive">*</span></h2>
           <p class="text-sm text-muted-foreground">
-            Upload your track files. The preview audio will be automatically generated from the first track file.
+            Upload your track files. The preview audio will be automatically limited to 20 seconds from the first track file.
           </p>
           
-          <div id="track-files-container" class="space-y-3">
-            <!-- Track files will be added dynamically -->
+          <div>
+            <label for="track_files" class="block text-sm font-medium mb-2">
+              Select Audio Files (Required)
+            </label>
+            <input
+              type="file"
+              id="track_files"
+              name="track_files"
+              accept="audio/*"
+              multiple
+              required
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              Select one or multiple audio files (MP3, WAV, etc.)
+            </p>
           </div>
-
-          <button
-            type="button"
-            id="add-track-file"
-            class="px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:border-primary transition-colors"
-          >
-            + Add Track File
-          </button>
+          
+          <div id="selected-files-preview" class="space-y-2 hidden">
+            <h3 class="text-sm font-medium">Selected Files:</h3>
+            <div id="files-list" class="space-y-1">
+              <!-- File list will be shown here -->
+            </div>
+          </div>
         </div>
 
         <!-- Display Options -->
@@ -243,52 +256,36 @@ export const prerender = false;
     // Import toast notification system
     import { showSuccessToast, showErrorToast } from '@/lib/toast';
 
-    // Track file counter
-    let trackFileCount = 0;
+    // Handle multiple file selection and show preview
+    const trackFilesInput = document.getElementById('track_files') as HTMLInputElement;
+    const selectedFilesPreview = document.getElementById('selected-files-preview');
+    const filesList = document.getElementById('files-list');
 
-    // Add track file input - Add initial track file on page load
-    function addTrackFileInput() {
-      trackFileCount++;
-      const container = document.getElementById('track-files-container');
-      if (!container) return;
-
-      const trackFileDiv = document.createElement('div');
-      trackFileDiv.className = 'flex gap-3 items-start bg-background border border-border rounded-lg p-4';
-      trackFileDiv.innerHTML = `
-        <div class="flex-1 space-y-2">
-          <input
-            type="text"
-            name="track_title_${trackFileCount}"
-            placeholder="Track title (e.g., Main Mix, Instrumental)"
-            class="w-full px-3 py-2 bg-card border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-          />
-          <input
-            type="file"
-            name="track_file_${trackFileCount}"
-            accept="audio/*"
-            ${trackFileCount === 1 ? 'required' : ''}
-            class="w-full text-sm file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-          />
-        </div>
-        <button
-          type="button"
-          onclick="this.parentElement.remove()"
-          class="p-2 text-muted-foreground hover:text-destructive transition-colors"
-          ${trackFileCount === 1 ? 'style="visibility:hidden"' : ''}
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+    trackFilesInput?.addEventListener('change', (e) => {
+      const input = e.target as HTMLInputElement;
+      const files = input.files;
+      
+      if (!files || files.length === 0 || !filesList || !selectedFilesPreview) return;
+      
+      // Clear previous preview
+      filesList.innerHTML = '';
+      
+      // Show files list
+      selectedFilesPreview.classList.remove('hidden');
+      
+      // Add each file to the preview
+      Array.from(files).forEach((file, index) => {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'flex items-center gap-2 text-sm text-muted-foreground';
+        fileDiv.innerHTML = `
+          <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
           </svg>
-        </button>
-      `;
-      container.appendChild(trackFileDiv);
-    }
-
-    // Add track file button event listener
-    document.getElementById('add-track-file')?.addEventListener('click', addTrackFileInput);
-
-    // Add first track file input automatically on page load
-    addTrackFileInput();
+          <span>${index + 1}. ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+        `;
+        filesList.appendChild(fileDiv);
+      });
+    });
 
     // Helper function to convert image to WebP format on client-side
     async function convertImageToWebP(file: File): Promise<Blob> {
