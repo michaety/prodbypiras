@@ -1,0 +1,88 @@
+---
+// Cancel page displayed when user cancels Stripe checkout
+import '@/styles/globals.css';
+import { XCircle, ShoppingBag, ShoppingCart } from 'lucide-react';
+
+export const prerender = false;
+---
+
+<script is:inline>
+  // Theme setup - force dark mode
+  document.documentElement.classList.add('dark');
+</script>
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content="Checkout cancelled" />
+    <title>Cancelled - Producer Portfolio</title>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 backdrop-blur-lg bg-background/80 border-b border-border">
+      <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <a href="/" class="text-2xl font-bold hover-accent">Producer</a>
+          <div class="flex items-center gap-6">
+            <a href="/shop" class="text-sm font-medium hover-accent">Shop</a>
+            <a href="/cart" class="text-sm font-medium hover-accent">Cart</a>
+            <a href="/contact" class="text-sm font-medium hover-accent">Contact</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Cancel Content -->
+    <section class="container mx-auto px-6 py-12">
+      <div class="max-w-2xl mx-auto text-center">
+        <div class="mb-8">
+          <XCircle className="w-24 h-24 mx-auto text-yellow-500 mb-6" />
+          <h1 class="text-4xl md:text-5xl font-bold mb-4">
+            <span class="text-primary">Checkout Cancelled</span>
+          </h1>
+          <p class="text-lg text-muted-foreground mb-8">
+            Your checkout was cancelled. No charges were made to your account.
+          </p>
+        </div>
+
+        <div class="bg-card rounded-lg border border-border p-8 mb-8">
+          <h2 class="text-xl font-semibold mb-4">What Would You Like to Do?</h2>
+          <div class="text-muted-foreground space-y-3">
+            <p>Your items are still waiting for you in your cart.</p>
+            <p>You can return to complete your purchase anytime.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a 
+            href="/cart"
+            class="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            Back to Cart
+          </a>
+          <a 
+            href="/shop"
+            class="inline-flex items-center justify-center gap-2 bg-card border border-border text-foreground px-6 py-3 rounded-lg font-semibold hover:bg-muted transition-colors"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            Continue Shopping
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-border mt-20">
+      <div class="container mx-auto px-6 py-8">
+        <p class="text-center text-muted-foreground text-sm">
+          © {new Date().getFullYear()} Producer Portfolio. All rights reserved.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

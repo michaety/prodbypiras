@@ -89,7 +89,7 @@ export async function GET({ request, locals, url }) {
       apiVersion: '2024-11-20.acacia',
     });
 
-    // Create Stripe checkout session
+    // Create Stripe checkout session with full URLs (fix for "Not a valid URL" error)
     const session = await stripe.checkout.sessions.create({
       line_items: items.map(item => ({
         price_data: {
@@ -104,8 +104,8 @@ export async function GET({ request, locals, url }) {
         quantity: 1,
       })),
       mode: 'payment',
-      success_url: `${url.origin}/shop?success=true`,
-      cancel_url: `${url.origin}/${isCartCheckout ? 'cart' : 'shop'}?canceled=true`,
+      success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${url.origin}/cancel`,
     });
     
     // Clear cart after successful checkout session creation
@@ -205,13 +205,17 @@ export async function GET({ request, locals, url }) {
   } catch (error) {
     console.error("Error creating checkout session:", error);
     
-    // Return detailed error message for debugging
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // Return user-friendly error message
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    const userMessage = errorMessage.includes("Invalid URL") 
+      ? "Checkout configuration error. Please contact support."
+      : "Unable to process checkout. Please try again or contact support.";
+    
     return new Response(
       JSON.stringify({
-        error: "Internal server error",
-        message: errorMessage,
-        details: "Failed to create checkout session"
+        error: "Checkout failed",
+        message: userMessage,
+        details: errorMessage
       }),
       { 
         status: 500,

@@ -1,0 +1,97 @@
+---
+// Success page displayed after successful Stripe checkout
+import '@/styles/globals.css';
+import { CheckCircle, Home, ShoppingBag } from 'lucide-react';
+
+export const prerender = false;
+
+// Get session ID from query parameter
+const sessionId = Astro.url.searchParams.get('session_id');
+---
+
+<script is:inline>
+  // Theme setup - force dark mode
+  document.documentElement.classList.add('dark');
+</script>
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content="Purchase successful" />
+    <title>Success - Producer Portfolio</title>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 backdrop-blur-lg bg-background/80 border-b border-border">
+      <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <a href="/" class="text-2xl font-bold hover-accent">Producer</a>
+          <div class="flex items-center gap-6">
+            <a href="/shop" class="text-sm font-medium hover-accent">Shop</a>
+            <a href="/contact" class="text-sm font-medium hover-accent">Contact</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Success Content -->
+    <section class="container mx-auto px-6 py-12">
+      <div class="max-w-2xl mx-auto text-center">
+        <div class="mb-8">
+          <CheckCircle className="w-24 h-24 mx-auto text-green-500 mb-6" />
+          <h1 class="text-4xl md:text-5xl font-bold mb-4">
+            <span class="text-primary">Success!</span> Purchase Complete
+          </h1>
+          <p class="text-lg text-muted-foreground mb-8">
+            Thank you for your purchase! Your order has been processed successfully.
+          </p>
+        </div>
+
+        <div class="bg-card rounded-lg border border-border p-8 mb-8">
+          <h2 class="text-xl font-semibold mb-4">What's Next?</h2>
+          <div class="text-left space-y-4 text-muted-foreground">
+            <p>✓ You'll receive a confirmation email with your order details and download links.</p>
+            <p>✓ Check your email inbox (and spam folder) for the receipt from Stripe.</p>
+            <p>✓ Your purchased files will be available for download immediately.</p>
+          </div>
+        </div>
+
+        {sessionId && (
+          <div class="text-xs text-muted-foreground mb-8 font-mono">
+            Session ID: {sessionId}
+          </div>
+        )}
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a 
+            href="/"
+            class="inline-flex items-center justify-center gap-2 bg-card border border-border text-foreground px-6 py-3 rounded-lg font-semibold hover:bg-muted transition-colors"
+          >
+            <Home className="w-5 h-5" />
+            Back to Home
+          </a>
+          <a 
+            href="/shop"
+            class="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            Continue Shopping
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-border mt-20">
+      <div class="container mx-auto px-6 py-8">
+        <p class="text-center text-muted-foreground text-sm">
+          © {new Date().getFullYear()} Producer Portfolio. All rights reserved.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
