@@ -87,19 +87,33 @@ export async function GET({ request, locals, url }) {
     // Initialize Stripe with proper API version
     const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' });
     
-    // Build line items for Stripe
-    const lineItems = items.map(item => ({
-      price_data: {
-        currency: 'usd',
-        product_data: { 
-          name: item.title, 
-          description: item.description || '', 
-          images: item.image_url ? [item.image_url] : [] 
+    // Build line items for Stripe with validated image URLs
+    const lineItems = items.map(item => {
+      // Validate image URL format for Stripe compatibility
+      let images: string[] = [];
+      if (item.image_url) {
+        // Stripe requires absolute URLs starting with http:// or https://
+        if (item.image_url.startsWith('http://') || item.image_url.startsWith('https://')) {
+          images = [item.image_url];
+          console.log('Valid image URL for item:', item.title, '->', item.image_url);
+        } else {
+          console.warn('Invalid image URL format (must be absolute URL):', item.image_url);
+        }
+      }
+      
+      return {
+        price_data: {
+          currency: 'usd',
+          product_data: { 
+            name: item.title, 
+            description: item.description || '', 
+            images 
+          },
+          unit_amount: Math.round((item.price || 1000) * 100),
         },
-        unit_amount: Math.round((item.price || 1000) * 100),
-      },
-      quantity: 1,
-    }));
+        quantity: 1,
+      };
+    });
 
     // Fix URL validation with domain check and proper fallback
     // Use request URL origin (works for both custom domain and Worker URL)
