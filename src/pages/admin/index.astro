@@ -11,10 +11,118 @@ const { DB } = Astro.locals.runtime.env;
 // Fetch shop listings from D1
 const shopListingService = new ShopListingService(DB);
 const listings = await shopListingService.getAll();
+
+// Fetch stats from D1
+// Customer stats
+const customerStats = await DB.prepare(`
+  SELECT 
+    COUNT(*) as total_customers,
+    COUNT(CASE WHEN created_at >= datetime('now', '-30 days') THEN 1 END) as new_customers_30d
+  FROM customers
+`).first();
+
+// Sales stats (from shop_listings sold field)
+const salesStats = await DB.prepare(`
+  SELECT 
+    COUNT(*) as total_listings,
+    SUM(CASE WHEN sold > 0 THEN sold ELSE 0 END) as total_sales,
+    SUM(CASE WHEN sold > 0 THEN sold * price ELSE 0 END) as total_revenue
+  FROM shop_listings
+`).first();
+
+// Recent purchases (using contact_submissions as a proxy for now, since we don't have a purchases table)
+const recentActivity = await DB.prepare(`
+  SELECT * FROM contact_submissions 
+  ORDER BY created_at DESC 
+  LIMIT 5
+`).all();
 ---
 
 <Layout title="Shop Listings">
   <div class="space-y-6">
+    <!-- Stats Dashboard -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- Total Listings -->
+      <div class="bg-card rounded-lg border border-border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-muted-foreground">Total Listings</p>
+            <h3 class="text-2xl font-bold mt-1">{salesStats?.total_listings || 0}</h3>
+          </div>
+          <div class="p-3 bg-primary/10 rounded-full">
+            <Music className="w-6 h-6 text-primary" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Sales -->
+      <div class="bg-card rounded-lg border border-border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-muted-foreground">Total Sales</p>
+            <h3 class="text-2xl font-bold mt-1">{salesStats?.total_sales || 0}</h3>
+          </div>
+          <div class="p-3 bg-green-500/10 rounded-full">
+            <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Revenue -->
+      <div class="bg-card rounded-lg border border-border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-muted-foreground">Total Revenue</p>
+            <h3 class="text-2xl font-bold mt-1">${Number(salesStats?.total_revenue || 0).toFixed(2)}</h3>
+          </div>
+          <div class="p-3 bg-blue-500/10 rounded-full">
+            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Customers -->
+      <div class="bg-card rounded-lg border border-border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-muted-foreground">Total Customers</p>
+            <h3 class="text-2xl font-bold mt-1">{customerStats?.total_customers || 0}</h3>
+            {customerStats?.new_customers_30d > 0 && (
+              <p class="text-xs text-green-500 mt-1">+{customerStats.new_customers_30d} this month</p>
+            )}
+          </div>
+          <div class="p-3 bg-purple-500/10 rounded-full">
+            <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Promotions -->
+    <div class="bg-card rounded-lg border border-border p-6">
+      <h3 class="text-xl font-bold mb-4">Active Promotions</h3>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-lg">
+          <div>
+            <p class="font-semibold">BEATS20</p>
+            <p class="text-sm text-muted-foreground">20% off for first-time customers</p>
+          </div>
+          <span class="px-3 py-1 bg-green-500/10 text-green-500 text-sm font-medium rounded-full">
+            Active
+          </span>
+        </div>
+        <p class="text-sm text-muted-foreground text-center py-4">
+          Add more promotions through your admin panel
+        </p>
+      </div>
+    </div>
+
     <!-- Header with Add Button -->
     <div class="flex items-center justify-between">
       <div>
@@ -39,17 +147,53 @@ const listings = await shopListingService.getAll();
             <a href={`/admin/listings/${listing.id}`} class="block">
               <div class="bg-card rounded-lg overflow-hidden border border-border hover:border-primary transition-all">
                 {/* Image/Cover */}
-                {listing.image_url ? (
-                  <img 
-                    src={listing.image_url} 
-                    alt={listing.title}
-                    class="w-full aspect-square object-cover"
-                  />
-                ) : (
-                  <div class="w-full aspect-square bg-muted flex items-center justify-center">
-                    <Music className="w-16 h-16 text-muted-foreground" />
-                  </div>
-                )}
+                <div class="relative">
+                  {listing.image_url ? (
+                    <img 
+                      src={listing.image_url} 
+                      alt={listing.title}
+                      class="w-full aspect-square object-cover"
+                    />
+                  ) : (
+                    <div class="w-full aspect-square bg-muted flex items-center justify-center">
+                      <Music className="w-16 h-16 text-muted-foreground" />
+                    </div>
+                  )}
+                  
+                  {/* Audio Preview Overlay with Play/Pause */}
+                  {listing.preview_audio_url && (
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button 
+                        class="admin-play-btn bg-primary text-primary-foreground p-4 rounded-full hover:scale-110 transition-transform"
+                        data-audio-url={listing.preview_audio_url}
+                        data-listing-id={listing.id}
+                        onclick={(e: Event) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <svg class="play-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg class="pause-icon w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Audio timeline/scrub bar */}
+                  {listing.preview_audio_url && (
+                    <div class="absolute bottom-0 left-0 right-0 h-1 bg-gray-800/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div 
+                        class="admin-audio-progress h-full bg-primary transition-all duration-100"
+                        data-listing-id={listing.id}
+                        style="width: 0%"
+                      ></div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Details */}
                 <div class="p-4 space-y-2">
@@ -77,6 +221,18 @@ const listings = await shopListingService.getAll();
                   </div>
                 </div>
               </div>
+            </a>
+
+            {/* Edit Button - Shows on hover */}
+            <a
+              href={`/admin/listings/edit/${listing.id}`}
+              class="absolute top-2 left-2 p-2 bg-secondary text-secondary-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+              title="Edit listing"
+              onclick={(e: Event) => e.stopPropagation()}
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
             </a>
 
             {/* Delete Button - Shows on hover */}
@@ -107,7 +263,104 @@ const listings = await shopListingService.getAll();
     )}
   </div>
 
+  <!-- Hidden audio player for previews -->
+  <audio id="admin-preview-player" class="hidden"></audio>
+
   <script>
+    // Audio preview functionality with play/pause toggle and timeline
+    let currentAudio: HTMLAudioElement | null = null;
+    let currentButton: HTMLButtonElement | null = null;
+    let currentListingId: number | null = null;
+
+    // Initialize audio player
+    const audioPlayer = document.getElementById('admin-preview-player') as HTMLAudioElement;
+
+    // Handle play button clicks
+    document.querySelectorAll('.admin-play-btn').forEach((btn) => {
+      const button = btn as HTMLButtonElement;
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const audioUrl = button.getAttribute('data-audio-url');
+        const listingId = parseInt(button.getAttribute('data-listing-id') || '0');
+        
+        if (!audioPlayer || !audioUrl) return;
+
+        // Toggle pause if same audio is playing
+        if (currentListingId === listingId && !audioPlayer.paused) {
+          audioPlayer.pause();
+          updatePlayPauseButton(button, false);
+          currentAudio = null;
+          currentButton = null;
+          currentListingId = null;
+        } else {
+          // Stop previous audio and reset its button
+          if (currentButton && currentButton !== button) {
+            updatePlayPauseButton(currentButton, false);
+          }
+          
+          // Play new audio
+          audioPlayer.src = audioUrl;
+          audioPlayer.play();
+          updatePlayPauseButton(button, true);
+          currentAudio = audioPlayer;
+          currentButton = button;
+          currentListingId = listingId;
+        }
+      });
+    });
+
+    // Update play/pause button icon
+    function updatePlayPauseButton(button: HTMLButtonElement, isPlaying: boolean) {
+      const playIcon = button.querySelector('.play-icon');
+      const pauseIcon = button.querySelector('.pause-icon');
+      
+      if (playIcon && pauseIcon) {
+        if (isPlaying) {
+          playIcon.classList.add('hidden');
+          pauseIcon.classList.remove('hidden');
+        } else {
+          playIcon.classList.remove('hidden');
+          pauseIcon.classList.add('hidden');
+        }
+      }
+    }
+
+    // Update timeline progress
+    if (audioPlayer) {
+      audioPlayer.addEventListener('timeupdate', () => {
+        if (currentListingId !== null && audioPlayer.duration) {
+          const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+          const progressBar = document.querySelector(
+            `.admin-audio-progress[data-listing-id="${currentListingId}"]`
+          ) as HTMLElement;
+          
+          if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+          }
+        }
+      });
+
+      // Reset button when audio ends
+      audioPlayer.addEventListener('ended', () => {
+        if (currentButton) {
+          updatePlayPauseButton(currentButton, false);
+        }
+        if (currentListingId !== null) {
+          const progressBar = document.querySelector(
+            `.admin-audio-progress[data-listing-id="${currentListingId}"]`
+          ) as HTMLElement;
+          if (progressBar) {
+            progressBar.style.width = '0%';
+          }
+        }
+        currentAudio = null;
+        currentButton = null;
+        currentListingId = null;
+      });
+    }
+
     // Delete listing function
     (window as any).deleteListing = async function(id: number, title: string) {
       if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
