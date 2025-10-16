@@ -111,16 +111,10 @@ export async function POST({ request, locals }) {
         },
       });
       
-      // Construct public URL using R2 public bucket URL
-      // The R2 bucket should be configured with public access or custom domain
-      // Get the public URL from environment variable or use the proxy endpoint
-      const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL;
-      if (r2PublicUrl) {
-        imageUrl = `${r2PublicUrl}/${imageKey}`;
-      } else {
-        // Fallback: Use the Worker proxy endpoint to serve R2 files
-        imageUrl = `/api/uploads/${imageKey}`;
-      }
+      // Update to use new public R2 URLs for Stripe compatibility
+      // Use the public R2 domain URL for direct access
+      const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL || 'https://pub-e530d295499c43f291aaffc670ddb11a.r2.dev';
+      imageUrl = `${r2PublicUrl}/${imageKey}`;
     }
 
     // Collect track files first (we'll need them for preview generation)
@@ -174,14 +168,9 @@ export async function POST({ request, locals }) {
         },
       });
       
-      // Construct public URL
-      const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL;
-      if (r2PublicUrl) {
-        previewAudioUrl = `${r2PublicUrl}/${audioKey}`;
-      } else {
-        // Fallback: Use the Worker proxy endpoint to serve R2 files
-        previewAudioUrl = `/api/uploads/${audioKey}`;
-      }
+      // Use public R2 URL for preview audio (publicly accessible)
+      const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL || 'https://pub-e530d295499c43f291aaffc670ddb11a.r2.dev';
+      previewAudioUrl = `${r2PublicUrl}/${audioKey}`;
     }
 
     // Insert listing into database
@@ -227,9 +216,9 @@ export async function POST({ request, locals }) {
           },
         });
         
-        // Construct public URL
-        const r2PublicUrl = locals.runtime.env.R2_PUBLIC_URL;
-        const trackUrl = r2PublicUrl ? `${r2PublicUrl}/${trackKey}` : `/api/uploads/${trackKey}`;
+        // Store R2 key path for secure audio proxy (not public URL)
+        // Full track audio files should be served through the secure proxy after purchase
+        const trackUrl = trackKey; // Store just the key path, not full URL
 
         // Insert track into database
         await DB.prepare(
