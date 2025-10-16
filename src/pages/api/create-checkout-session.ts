@@ -6,12 +6,11 @@ export async function GET({ request, locals, url }) {
   try {
     const { STRIPE_SECRET_KEY, DB, NAMESPACE } = locals.runtime.env;
 
-    // Debug env and request context
+    // Debug to verify environment
     console.log('Env vars:', { STRIPE_SECRET_KEY, DB, NAMESPACE });
     console.log('Request URL:', url.href);
     console.log('Origin:', url.origin);
 
-    // Validate bindings
     if (!DB || !NAMESPACE || !STRIPE_SECRET_KEY) {
       console.error('Missing bindings:', { DB, NAMESPACE, STRIPE_SECRET_KEY });
       return new Response('Configuration error', { status: 500 });
@@ -47,8 +46,9 @@ export async function GET({ request, locals, url }) {
       quantity: 1,
     }));
 
-    // Force valid, hardcoded URLs
-    const baseUrl = 'https://hevin.dev'; // Explicit domain
+    // Use hardcoded URL with validation
+    const baseUrl = 'https://hevin.dev';
+    if (!baseUrl.startsWith('https://')) throw new Error('Base URL invalid');
     console.log('Checkout URLs:', `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`, `${baseUrl}/cancel`);
 
     const session = await stripe.checkout.sessions.create({
@@ -62,8 +62,8 @@ export async function GET({ request, locals, url }) {
     if (isCartCheckout) await NAMESPACE.put('cart', JSON.stringify([]));
     return Response.redirect(session.url, 303);
   } catch (error) {
-    console.error('Checkout error:', error.message, error.stack);
-    const userMessage = error.message.includes('Not a valid URL') ? 'Invalid checkout URL—contact support.' : 'Checkout failed. Try again.';
+    console.error('Checkout error:', error.message, error.stack || 'No stack');
+    const userMessage = error.message.includes('Not a valid URL') ? 'Invalid checkout URL—ensure domain is active.' : 'Checkout failed. Try again.';
     return new Response(JSON.stringify({ error: 'Checkout failed', message: userMessage, details: error.message }), { status: 500 });
   }
 }
