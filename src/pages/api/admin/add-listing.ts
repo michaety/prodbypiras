@@ -117,19 +117,21 @@ export async function POST({ request, locals }) {
       imageUrl = `${r2PublicUrl}/${imageKey}`;
     }
 
-    // Collect track files first (we'll need them for preview generation)
+    // Collect track files from multiple file input
     const trackFiles: Array<{ title: string; file: File }> = [];
-    let trackIndex = 1;
-
-    while (formData.get(`track_file_${trackIndex}`)) {
-      const trackTitle = formData.get(`track_title_${trackIndex}`) as string;
-      const trackFile = formData.get(`track_file_${trackIndex}`) as File;
-
-      if (trackFile && trackFile.size > 0) {
-        trackFiles.push({ title: trackTitle || `Track ${trackIndex}`, file: trackFile });
+    const uploadedFiles = formData.getAll("track_files") as File[];
+    
+    // Process all uploaded files
+    uploadedFiles.forEach((file, index) => {
+      if (file && file.size > 0) {
+        // Use filename without extension as default title
+        const defaultTitle = file.name.replace(/\.[^/.]+$/, '');
+        trackFiles.push({ 
+          title: defaultTitle || `Track ${index + 1}`, 
+          file: file 
+        });
       }
-      trackIndex++;
-    }
+    });
 
     // Track files are now required
     if (trackFiles.length === 0) {
@@ -146,8 +148,10 @@ export async function POST({ request, locals }) {
     }
 
     // Auto-generate preview audio from the first track file
-    // Note: In a production environment, you would use FFmpeg or similar to trim the audio
-    // For now, we'll use the first track as-is for preview
+    // NOTE: This uploads the full audio file for preview. Client-side JavaScript limits playback to 20 seconds.
+    // FUTURE IMPROVEMENT: For production, implement server-side audio trimming to create a true 20-second sample.
+    // This would require FFmpeg in the Workers environment, which is currently not straightforward.
+    // Options: Use Cloudflare Workers with FFmpeg WASM, or a separate service for audio processing.
     let previewAudioUrl = null;
     const firstTrack = trackFiles[0];
     if (firstTrack) {
@@ -160,8 +164,7 @@ export async function POST({ request, locals }) {
       // Read file as ArrayBuffer for Workers compatibility
       const arrayBuffer = await firstTrack.file.arrayBuffer();
       
-      // Upload to R2 with proper content type
-      // TODO: Implement server-side audio trimming using FFmpeg for better previews
+      // Upload full audio to R2 (client-side will limit playback to 20 seconds)
       await UPLOADS.put(audioKey, arrayBuffer, {
         httpMetadata: {
           contentType,

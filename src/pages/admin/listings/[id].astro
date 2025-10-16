@@ -111,14 +111,17 @@ if (!listing) {
             )}
           </div>
 
-          {/* Preview Audio */}
+          {/* Preview Audio (limited to 20 seconds) */}
           {listing.preview_audio_url && (
             <div class="pt-4 border-t border-border">
-              <h3 class="font-semibold mb-2">Preview Audio</h3>
-              <audio controls class="w-full">
-                <source src={listing.preview_audio_url} type="audio/mpeg" />
-                Your browser does not support the audio element.
-              </audio>
+              <h3 class="font-semibold mb-2">Preview Audio (20s sample)</h3>
+              <div class="space-y-2">
+                <audio id="preview-audio" controls class="w-full" data-audio-url={listing.preview_audio_url}>
+                  <source src={listing.preview_audio_url} type="audio/mpeg" />
+                  Your browser does not support the audio element.
+                </audio>
+                <p class="text-xs text-muted-foreground">Preview is limited to 20 seconds</p>
+              </div>
             </div>
           )}
 
@@ -200,7 +203,20 @@ if (!listing) {
   <audio id="track-player" class="hidden"></audio>
 
   <script>
-    // Track preview player
+    // Preview audio player with 20-second limit
+    const previewAudio = document.getElementById('preview-audio') as HTMLAudioElement;
+    
+    if (previewAudio) {
+      // Limit preview audio to 20 seconds
+      previewAudio.addEventListener('timeupdate', () => {
+        if (previewAudio.currentTime >= 20) {
+          previewAudio.pause();
+          previewAudio.currentTime = 0;
+        }
+      });
+    }
+    
+    // Track preview player (for full tracks - no limit)
     let currentTrackAudio: HTMLAudioElement | null = null;
 
     (window as any).playTrack = function(url: string) {

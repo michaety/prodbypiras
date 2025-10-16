@@ -241,11 +241,34 @@ const listings = await shopListingService.getAll();
         }
       }
 
-      // Update timeline progress
+      // Update timeline progress and enforce 20-second limit
       if (audioPlayer) {
         audioPlayer.addEventListener('timeupdate', () => {
+          // Limit preview to 20 seconds
+          if (audioPlayer.currentTime >= 20) {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            if (currentButton) {
+              updatePlayPauseButton(currentButton, false);
+            }
+            if (currentListingId !== null) {
+              const progressBar = document.querySelector(
+                `.audio-progress[data-listing-id="${currentListingId}"]`
+              ) as HTMLElement;
+              if (progressBar) {
+                progressBar.style.width = '0%';
+              }
+            }
+            currentAudio = null;
+            currentButton = null;
+            currentListingId = null;
+            return;
+          }
+          
           if (currentListingId !== null) {
-            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            // Calculate progress based on 20-second max duration
+            const maxDuration = Math.min(audioPlayer.duration, 20);
+            const progress = (audioPlayer.currentTime / maxDuration) * 100;
             const progressBar = document.querySelector(
               `.audio-progress[data-listing-id="${currentListingId}"]`
             ) as HTMLElement;
