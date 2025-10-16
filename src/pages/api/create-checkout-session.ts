@@ -8,6 +8,17 @@ export async function GET({ request, locals, url }) {
   try {
     const { STRIPE_SECRET_KEY, DB, NAMESPACE } = locals.runtime.env;
 
+    // Validate environment bindings
+    if (!DB) {
+      console.error('DB binding is not available');
+      return new Response("Database not configured", { status: 500 });
+    }
+
+    if (!NAMESPACE) {
+      console.error('NAMESPACE binding is not available');
+      return new Response("KV namespace not configured", { status: 500 });
+    }
+
     // Check if this is a cart checkout or single item
     const isCartCheckout = url.searchParams.get("cart") === "true";
     const listingId = url.searchParams.get("listing_id");
@@ -16,36 +27,51 @@ export async function GET({ request, locals, url }) {
 
     if (isCartCheckout) {
       // Get cart items from KV
-      const cartJson = await NAMESPACE.get("cart");
-      const cartIds = cartJson ? JSON.parse(cartJson) : [];
+      try {
+        const cartJson = await NAMESPACE.get("cart");
+        const cartIds = cartJson ? JSON.parse(cartJson) : [];
 
-      if (cartIds.length === 0) {
-        return new Response("Cart is empty", { status: 400 });
+        if (cartIds.length === 0) {
+          return new Response("Cart is empty", { status: 400 });
+        }
+
+        // Fetch listings for cart items
+        const placeholders = cartIds.map(() => '?').join(',');
+        const query = `SELECT * FROM shop_listings WHERE id IN (${placeholders})`;
+        const { results } = await DB.prepare(query).bind(...cartIds).all();
+        items = results || [];
+      } catch (kvError) {
+        console.error('Error fetching cart from KV:', kvError);
+        return new Response("Error loading cart", { status: 500 });
       }
-
-      // Fetch listings for cart items
-      const placeholders = cartIds.map(() => '?').join(',');
-      const query = `SELECT * FROM shop_listings WHERE id IN (${placeholders})`;
-      const { results } = await DB.prepare(query).bind(...cartIds).all();
-      items = results;
     } else {
       // Single item checkout
       if (!listingId) {
         return new Response("Missing listing_id parameter", { status: 400 });
       }
 
-      // Fetch listing from D1
-      const listing = await DB.prepare(
-        "SELECT * FROM shop_listings WHERE id = ?"
-      )
-        .bind(listingId)
-        .first();
+      try {
+        // Fetch listing from D1
+        const listing = await DB.prepare(
+          "SELECT * FROM shop_listings WHERE id = ?"
+        )
+          .bind(listingId)
+          .first();
 
-      if (!listing) {
-        return new Response("Listing not found", { status: 404 });
+        if (!listing) {
+          return new Response("Listing not found", { status: 404 });
+        }
+
+        items = [listing];
+      } catch (dbError) {
+        console.error('Error fetching listing from DB:', dbError);
+        return new Response("Error loading listing", { status: 500 });
       }
+    }
 
-      items = [listing];
+    // Validate items
+    if (items.length === 0) {
+      return new Response("No items found", { status: 404 });
     }
 
     // Check if Stripe is configured
@@ -178,6 +204,19 @@ export async function GET({ request, locals, url }) {
     */
   } catch (error) {
     console.error("Error creating checkout session:", error);
-    return new Response("Internal server error", { status: 500 });
+    
+    // Return detailed error message for debugging
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        message: errorMessage,
+        details: "Failed to create checkout session"
+      }),
+      { 
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
   }
 }
