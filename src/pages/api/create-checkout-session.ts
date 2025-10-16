@@ -6,7 +6,7 @@ export async function GET({ request, locals, url }) {
   try {
     const { STRIPE_SECRET_KEY, DB, NAMESPACE } = locals.runtime.env;
 
-    // Debug to verify environment
+    // Debug environment and request
     console.log('Env vars:', { STRIPE_SECRET_KEY, DB, NAMESPACE });
     console.log('Request URL:', url.href);
     console.log('Origin:', url.origin);
@@ -46,24 +46,28 @@ export async function GET({ request, locals, url }) {
       quantity: 1,
     }));
 
-    // Use hardcoded URL with validation
+    // Use hardcoded URL with fallback if domain issue
     const baseUrl = 'https://hevin.dev';
     if (!baseUrl.startsWith('https://')) throw new Error('Base URL invalid');
     console.log('Checkout URLs:', `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`, `${baseUrl}/cancel`);
+
+    // Fallback to Worker URL if custom domain fails
+    const fallbackUrl = url.origin.includes('workers.dev') ? url.origin : baseUrl;
+    console.log('Fallback URL:', fallbackUrl);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/cancel`,
+      success_url: `${fallbackUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${fallbackUrl}/cancel`,
     });
 
     if (isCartCheckout) await NAMESPACE.put('cart', JSON.stringify([]));
     return Response.redirect(session.url, 303);
   } catch (error) {
     console.error('Checkout error:', error.message, error.stack || 'No stack');
-    const userMessage = error.message.includes('Not a valid URL') ? 'Invalid checkout URL—ensure domain is active.' : 'Checkout failed. Try again.';
+    const userMessage = error.message.includes('Not a valid URL') ? 'Domain not active—check custom domain setup.' : 'Checkout failed. Try again.';
     return new Response(JSON.stringify({ error: 'Checkout failed', message: userMessage, details: error.message }), { status: 500 });
   }
 }
