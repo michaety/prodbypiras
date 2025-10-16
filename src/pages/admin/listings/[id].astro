@@ -125,14 +125,14 @@ if (!listing) {
             </div>
           )}
 
-          {/* Edit Button - Placeholder for future implementation */}
+          {/* Edit Button */}
           <div class="pt-4">
-            <button 
+            <a 
+              href={`/admin/listings/edit/${listing.id}`}
               class="inline-flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-              onclick="alert('Edit functionality coming soon!')"
             >
               <Edit className="w-4 h-4" /> Edit Listing
-            </button>
+            </a>
           </div>
         </div>
       </div>

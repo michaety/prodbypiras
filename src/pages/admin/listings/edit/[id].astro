@@ -1,0 +1,244 @@
+---
+// Admin edit listing form - update listing details in D1/R2
+import Layout from '@/layouts/Layout.astro';
+import { ShopListingService } from '@/lib/services/shop-listing';
+import { ArrowLeft } from 'lucide-react';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+const { DB } = Astro.locals.runtime.env;
+
+if (!id) {
+  return Astro.redirect('/admin');
+}
+
+// Fetch listing from D1
+const shopListingService = new ShopListingService(DB);
+const listing = await shopListingService.getById(parseInt(id));
+
+if (!listing) {
+  return Astro.redirect('/admin');
+}
+---
+
+<Layout title={`Edit Listing: ${listing.title}`}>
+  <div class="space-y-6">
+    <!-- Back Button and Header -->
+    <div class="flex items-center gap-4">
+      <a 
+        href={`/admin/listings/${id}`}
+        class="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to Listing
+      </a>
+    </div>
+
+    <div>
+      <h1 class="text-3xl font-bold">Edit Listing</h1>
+      <p class="text-muted-foreground mt-1">Update listing details and metadata</p>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="bg-card rounded-lg border border-border p-6">
+      <form method="POST" action="/api/admin/update-listing" class="space-y-6">
+        <input type="hidden" name="id" value={listing.id} />
+
+        <!-- Title -->
+        <div>
+          <label for="title" class="block text-sm font-medium mb-2">
+            Title <span class="text-destructive">*</span>
+          </label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            value={listing.title}
+            required
+            class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <!-- Type -->
+        <div>
+          <label for="type" class="block text-sm font-medium mb-2">
+            Type <span class="text-destructive">*</span>
+          </label>
+          <select
+            id="type"
+            name="type"
+            required
+            class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="beat" selected={listing.type === 'beat'}>Beat</option>
+            <option value="sample" selected={listing.type === 'sample'}>Sample</option>
+            <option value="stems" selected={listing.type === 'stems'}>Stems</option>
+            <option value="pack" selected={listing.type === 'pack'}>Pack</option>
+          </select>
+        </div>
+
+        <!-- Price -->
+        <div>
+          <label for="price" class="block text-sm font-medium mb-2">
+            Price (USD) <span class="text-destructive">*</span>
+          </label>
+          <input
+            type="number"
+            id="price"
+            name="price"
+            value={listing.price}
+            step="0.01"
+            min="0"
+            required
+            class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="block text-sm font-medium mb-2">
+            Description
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            rows="4"
+            class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >{listing.description}</textarea>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- Length -->
+          <div>
+            <label for="length" class="block text-sm font-medium mb-2">
+              Length
+            </label>
+            <input
+              type="text"
+              id="length"
+              name="length"
+              value={listing.length}
+              placeholder="e.g., 3:45"
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <!-- BPM -->
+          <div>
+            <label for="bpm" class="block text-sm font-medium mb-2">
+              BPM
+            </label>
+            <input
+              type="number"
+              id="bpm"
+              name="bpm"
+              value={listing.bpm}
+              min="1"
+              max="300"
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <!-- Key -->
+          <div>
+            <label for="key" class="block text-sm font-medium mb-2">
+              Key
+            </label>
+            <input
+              type="text"
+              id="key"
+              name="key"
+              value={listing.key}
+              placeholder="e.g., Am, G Major"
+              class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <!-- Featured -->
+          <div class="flex items-center gap-3 pt-6">
+            <input
+              type="checkbox"
+              id="featured"
+              name="featured"
+              checked={listing.featured}
+              class="w-5 h-5 bg-background border border-border rounded focus:ring-2 focus:ring-primary"
+            />
+            <label for="featured" class="text-sm font-medium">
+              Featured on Portfolio Page
+            </label>
+          </div>
+        </div>
+
+        <!-- Image URL -->
+        <div>
+          <label for="image_url" class="block text-sm font-medium mb-2">
+            Image URL
+          </label>
+          <input
+            type="url"
+            id="image_url"
+            name="image_url"
+            value={listing.image_url}
+            placeholder="https://..."
+            class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <p class="text-xs text-muted-foreground mt-1">
+            Upload image to R2 bucket and paste URL here
+          </p>
+        </div>
+
+        <!-- Preview Audio URL -->
+        <div>
+          <label for="preview_audio_url" class="block text-sm font-medium mb-2">
+            Preview Audio URL
+          </label>
+          <input
+            type="url"
+            id="preview_audio_url"
+            name="preview_audio_url"
+            value={listing.preview_audio_url}
+            placeholder="https://..."
+            class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <p class="text-xs text-muted-foreground mt-1">
+            Upload preview audio to R2 bucket and paste URL here
+          </p>
+        </div>
+
+        <!-- Stripe Price ID -->
+        <div>
+          <label for="stripe_price_id" class="block text-sm font-medium mb-2">
+            Stripe Price ID
+          </label>
+          <input
+            type="text"
+            id="stripe_price_id"
+            name="stripe_price_id"
+            value={listing.stripe_price_id}
+            placeholder="price_..."
+            class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <p class="text-xs text-muted-foreground mt-1">
+            Leave empty to auto-create on save (feature not implemented yet)
+          </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-4 pt-6 border-t border-border">
+          <button
+            type="submit"
+            class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold"
+          >
+            Save Changes
+          </button>
+          <a
+            href={`/admin/listings/${id}`}
+            class="px-6 py-3 bg-card border border-border rounded-lg hover:bg-muted transition-colors font-semibold"
+          >
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</Layout>
