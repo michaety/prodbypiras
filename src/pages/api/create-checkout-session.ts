@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 
+// Use Stripe hosted domains (checkout.stripe.com) for checkout
 export const prerender = false;
 
 export async function GET({ request, locals, url }) {
