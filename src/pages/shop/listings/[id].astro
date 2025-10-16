@@ -93,7 +93,7 @@ if (!listing) {
                 <div class="mt-6 space-y-3">
                   <h3 class="font-semibold text-lg">Preview</h3>
                   <div class="bg-background rounded-lg p-4 border border-border">
-                    <div id="waveform-preview" class="mb-3"></div>
+                    <div id="waveform-preview" data-audio-url={listing.preview_audio_url} class="mb-3"></div>
                     <div class="flex items-center gap-3">
                       <button 
                         id="play-preview-btn"
@@ -249,12 +249,13 @@ if (!listing) {
       }
 
       // Initialize preview waveform if available
-      const previewAudioUrl = document.getElementById('waveform-preview')?.getAttribute('data-url');
       let previewWavesurfer: WaveSurfer | null = null;
 
-      if (document.getElementById('waveform-preview')) {
-        const audioUrl = document.querySelector('[data-audio-url]')?.getAttribute('data-audio-url');
-        if (audioUrl) {
+      const waveformPreviewEl = document.getElementById('waveform-preview');
+      if (waveformPreviewEl) {
+        const previewAudioUrl = waveformPreviewEl.getAttribute('data-audio-url');
+        
+        if (previewAudioUrl) {
           previewWavesurfer = WaveSurfer.create({
             container: '#waveform-preview',
             waveColor: 'rgb(147, 51, 234)',
@@ -267,7 +268,7 @@ if (!listing) {
             barGap: 2,
           });
 
-          previewWavesurfer.load(audioUrl);
+          previewWavesurfer.load(previewAudioUrl);
 
           // Update time display
           previewWavesurfer.on('ready', () => {
