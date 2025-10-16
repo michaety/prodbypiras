@@ -6,13 +6,12 @@ export async function GET({ request, locals, url }) {
   try {
     const { STRIPE_SECRET_KEY, DB, NAMESPACE } = locals.runtime.env;
 
-    // Debug environment and request
     console.log('Env vars:', { STRIPE_SECRET_KEY, DB, NAMESPACE });
     console.log('Request URL:', url.href);
     console.log('Origin:', url.origin);
 
     if (!DB || !NAMESPACE || !STRIPE_SECRET_KEY) {
-      console.error('Missing bindings:', { DB, NAMESPACE, STRIPE_SECRET_KEY });
+      console.error('Missing bindings');
       return new Response('Configuration error', { status: 500 });
     }
 
@@ -46,21 +45,18 @@ export async function GET({ request, locals, url }) {
       quantity: 1,
     }));
 
-    // Use hardcoded URL with fallback if domain issue
-    const baseUrl = 'https://hevin.dev';
-    if (!baseUrl.startsWith('https://')) throw new Error('Base URL invalid');
-    console.log('Checkout URLs:', `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`, `${baseUrl}/cancel`);
-
-    // Fallback to Worker URL if custom domain fails
-    const fallbackUrl = url.origin.includes('workers.dev') ? url.origin : baseUrl;
-    console.log('Fallback URL:', fallbackUrl);
+    // Use custom domain with fallback to Worker URL
+    const preferredUrl = 'https://hevin.dev';
+    const fallbackUrl = url.origin; // e.g., prodbypiras.michaety.workers.dev
+    const activeUrl = preferredUrl.startsWith('https://') ? preferredUrl : fallbackUrl;
+    console.log('Using URL:', activeUrl);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${fallbackUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${fallbackUrl}/cancel`,
+      success_url: `${activeUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${activeUrl}/cancel`,
     });
 
     if (isCartCheckout) await NAMESPACE.put('cart', JSON.stringify([]));
