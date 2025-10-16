@@ -123,21 +123,51 @@ export async function POST({ request, locals }) {
       }
     }
 
-    // Handle preview audio upload
-    // Note: Audio should be pre-trimmed to ~20 seconds before upload (client-side or manually)
+    // Collect track files first (we'll need them for preview generation)
+    const trackFiles: Array<{ title: string; file: File }> = [];
+    let trackIndex = 1;
+
+    while (formData.get(`track_file_${trackIndex}`)) {
+      const trackTitle = formData.get(`track_title_${trackIndex}`) as string;
+      const trackFile = formData.get(`track_file_${trackIndex}`) as File;
+
+      if (trackFile && trackFile.size > 0) {
+        trackFiles.push({ title: trackTitle || `Track ${trackIndex}`, file: trackFile });
+      }
+      trackIndex++;
+    }
+
+    // Track files are now required
+    if (trackFiles.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "At least one track file is required",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Auto-generate preview audio from the first track file
+    // Note: In a production environment, you would use FFmpeg or similar to trim the audio
+    // For now, we'll use the first track as-is for preview
     let previewAudioUrl = null;
-    const previewAudio = formData.get("preview_audio") as File | null;
-    if (previewAudio && previewAudio.size > 0) {
+    const firstTrack = trackFiles[0];
+    if (firstTrack) {
       const timestamp = Date.now();
-      const audioKey = `audio/previews/${timestamp}_${previewAudio.name}`;
+      const audioKey = `audio/previews/${timestamp}_preview_${firstTrack.file.name}`;
       
       // Get proper content type
-      const contentType = getAudioContentType(previewAudio.name);
+      const contentType = getAudioContentType(firstTrack.file.name);
       
       // Read file as ArrayBuffer for Workers compatibility
-      const arrayBuffer = await previewAudio.arrayBuffer();
+      const arrayBuffer = await firstTrack.file.arrayBuffer();
       
       // Upload to R2 with proper content type
+      // TODO: Implement server-side audio trimming using FFmpeg for better previews
       await UPLOADS.put(audioKey, arrayBuffer, {
         httpMetadata: {
           contentType,
@@ -177,23 +207,8 @@ export async function POST({ request, locals }) {
 
     const listingId = result.meta?.last_row_id;
 
-    // Handle track files
-    if (listingId) {
-      // Find all track file inputs
-      const trackFiles: Array<{ title: string; file: File }> = [];
-      let trackIndex = 1;
-
-      while (formData.get(`track_file_${trackIndex}`)) {
-        const trackTitle = formData.get(`track_title_${trackIndex}`) as string;
-        const trackFile = formData.get(`track_file_${trackIndex}`) as File;
-
-        if (trackFile && trackFile.size > 0) {
-          trackFiles.push({ title: trackTitle || `Track ${trackIndex}`, file: trackFile });
-        }
-        trackIndex++;
-      }
-
-      // Upload and save track files
+    // Upload and save track files
+    if (listingId && trackFiles.length > 0) {
       for (let i = 0; i < trackFiles.length; i++) {
         const { title: trackTitle, file } = trackFiles[i];
         const timestamp = Date.now();

@@ -85,11 +85,28 @@ const listings = await shopListingService.getAll();
                   {listing.preview_audio_url && (
                     <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <button 
-                        class="bg-primary text-primary-foreground p-4 rounded-full hover:scale-110 transition-transform"
-                        onclick={`playPreview('${listing.preview_audio_url}')`}
+                        class="audio-play-btn bg-primary text-primary-foreground p-4 rounded-full hover:scale-110 transition-transform"
+                        data-audio-url={listing.preview_audio_url}
+                        data-listing-id={listing.id}
                       >
-                        <Play className="w-6 h-6" />
+                        <svg class="play-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg class="pause-icon w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                       </button>
+                    </div>
+                  )}
+                  {/* Audio timeline/scrub bar */}
+                  {listing.preview_audio_url && (
+                    <div class="absolute bottom-0 left-0 right-0 h-1 bg-gray-800/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div 
+                        class="audio-progress h-full bg-primary transition-all duration-100"
+                        data-listing-id={listing.id}
+                        style="width: 0%"
+                      ></div>
                     </div>
                   )}
                 </div>
@@ -164,29 +181,101 @@ const listings = await shopListingService.getAll();
     </footer>
 
     <script>
-      // Audio preview functionality
+      // Import toast notification system
+      import { showSuccessToast, showErrorToast } from '@/lib/toast';
+
+      // Audio preview functionality with play/pause toggle and timeline
       let currentAudio: HTMLAudioElement | null = null;
+      let currentButton: HTMLButtonElement | null = null;
+      let currentListingId: number | null = null;
 
-      (window as any).playPreview = function(url: string) {
-        const player = document.getElementById('preview-player') as HTMLAudioElement;
-        if (!player) return;
+      // Initialize audio player
+      const audioPlayer = document.getElementById('preview-player') as HTMLAudioElement;
 
-        if (currentAudio && currentAudio.src === url && !currentAudio.paused) {
-          // Pause if already playing
-          currentAudio.pause();
-          currentAudio = null;
-        } else {
-          // Play new audio
-          if (currentAudio) {
-            currentAudio.pause();
+      // Handle play button clicks
+      document.querySelectorAll('.audio-play-btn').forEach((btn) => {
+        const button = btn as HTMLButtonElement;
+        button.addEventListener('click', () => {
+          const audioUrl = button.getAttribute('data-audio-url');
+          const listingId = parseInt(button.getAttribute('data-listing-id') || '0');
+          
+          if (!audioPlayer || !audioUrl) return;
+
+          // Toggle pause if same audio is playing
+          if (currentListingId === listingId && !audioPlayer.paused) {
+            audioPlayer.pause();
+            updatePlayPauseButton(button, false);
+            currentAudio = null;
+            currentButton = null;
+            currentListingId = null;
+          } else {
+            // Stop previous audio and reset its button
+            if (currentButton && currentButton !== button) {
+              updatePlayPauseButton(currentButton, false);
+            }
+            
+            // Play new audio
+            audioPlayer.src = audioUrl;
+            audioPlayer.play();
+            updatePlayPauseButton(button, true);
+            currentAudio = audioPlayer;
+            currentButton = button;
+            currentListingId = listingId;
           }
-          player.src = url;
-          player.play();
-          currentAudio = player;
-        }
-      };
+        });
+      });
 
-      // Add to cart functionality
+      // Update play/pause button icon
+      function updatePlayPauseButton(button: HTMLButtonElement, isPlaying: boolean) {
+        const playIcon = button.querySelector('.play-icon');
+        const pauseIcon = button.querySelector('.pause-icon');
+        
+        if (playIcon && pauseIcon) {
+          if (isPlaying) {
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+          } else {
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+          }
+        }
+      }
+
+      // Update timeline progress
+      if (audioPlayer) {
+        audioPlayer.addEventListener('timeupdate', () => {
+          if (currentListingId !== null) {
+            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            const progressBar = document.querySelector(
+              `.audio-progress[data-listing-id="${currentListingId}"]`
+            ) as HTMLElement;
+            
+            if (progressBar) {
+              progressBar.style.width = `${progress}%`;
+            }
+          }
+        });
+
+        // Reset button when audio ends
+        audioPlayer.addEventListener('ended', () => {
+          if (currentButton) {
+            updatePlayPauseButton(currentButton, false);
+          }
+          if (currentListingId !== null) {
+            const progressBar = document.querySelector(
+              `.audio-progress[data-listing-id="${currentListingId}"]`
+            ) as HTMLElement;
+            if (progressBar) {
+              progressBar.style.width = '0%';
+            }
+          }
+          currentAudio = null;
+          currentButton = null;
+          currentListingId = null;
+        });
+      }
+
+      // Add to cart functionality with toast notification
       (window as any).addToCart = async function(id: number) {
         try {
           const response = await fetch('/api/cart', {
@@ -202,14 +291,14 @@ const listings = await shopListingService.getAll();
             if (cartCount) {
               cartCount.textContent = data.cart.length.toString();
             }
-            // Show success message
-            alert('Added to cart!');
+            // Show success toast notification
+            showSuccessToast('Item added to cart!');
           } else {
-            alert('Failed to add to cart. Please try again.');
+            showErrorToast('Failed to add to cart. Please try again.');
           }
         } catch (error) {
           console.error('Error adding to cart:', error);
-          alert('An error occurred. Please try again.');
+          showErrorToast('An error occurred. Please try again.');
         }
       };
 
