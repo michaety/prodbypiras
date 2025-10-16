@@ -10,9 +10,6 @@
     "enabled": true
   },
   "upload_source_maps": true,
-  "vars": {
-    "EXAMPLE_VALUE": "cf_api"
-  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -32,4 +29,4 @@
       "bucket_name": "piras-uploads"
     }
   ]
-} 
+}
